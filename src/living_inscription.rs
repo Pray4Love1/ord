@@ -4,7 +4,7 @@
 //! Compile with: cargo +nightly build -Zunstable-options --edition 2024
 //! Requires: serde = { version = "1", features = ["derive"] }, blake3, chrono
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, TimeZone, Utc};
 use serde::{Deserialize, Serialize};
 
 /// Immutable root data committed in the Bitcoin inscription.
@@ -185,7 +185,7 @@ mod tests {
       version: 1,
       parent_hash: None,
       creator: "bc1qexample".into(),
-      timestamp: DateTime::from_timestamp(1_700_000_000, 0).unwrap(),
+      timestamp: Utc.timestamp_opt(1_700_000_000, 0).single().unwrap(),
       content_uri: "ipfs://QmExample".into(),
       metadata: serde_json::json!({"type":"art"}),
     };
