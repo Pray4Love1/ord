@@ -11,10 +11,12 @@ contract MirrorVerifier {
 
     mapping(bytes32 => MirrorRecord) public mirrors;
     mapping(address => bool) public authorizedSigners;
+    address public owner;
 
     event MirrorPosted(address indexed creator, bytes32 indexed commitment, uint64 blockHeight, uint64 timestampMs);
 
     constructor() {
+        owner = msg.sender;
         authorizedSigners[msg.sender] = true;
     }
 
@@ -47,8 +49,12 @@ contract MirrorVerifier {
         return ECDSA.recover(ethSigned, sig);
     }
 
-    function authorize(address signer, bool enabled) external {
-        require(msg.sender == signer || msg.sender == address(this), "Not permitted");
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Not permitted");
+        _;
+    }
+
+    function authorize(address signer, bool enabled) external onlyOwner {
         authorizedSigners[signer] = enabled;
     }
 }
