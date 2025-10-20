@@ -35,12 +35,14 @@ Ord 2.0 refines wallet ergonomics while staying anchored to Bitcoin Core for key
 management.
 
 - Use `ord wallet sweep` to consolidate dust and recover stranded inscriptions.
-- Connect hardware wallets with `ord wallet connect --device <name>` and approve
-  PSBTs directly from your device.
-- PSBT-based offers can now be submitted from the command line:
-  ```sh
-  ord wallet offers submit --psbt offer.psbt
-  ```
+- Continue to manage hardware wallets through Bitcoin Core or external tools;
+  Ord 2.0 does not add a dedicated `wallet connect` command.
+- Create PSBT offers with `ord wallet offer create --inscription <id> --amount
+  <sats> --fee-rate <rate>` and optionally `--submit <url>` to post them to a
+  marketplace.
+- Accept incoming offers with `ord wallet offer accept --psbt <base64>
+  --inscription <id> --amount <sats>` to sign and broadcast the finalized
+  transaction.
 
 Continue to keep ordinal and cardinal funds separated. Bitcoin Core still does
 not track inscription provenance and ordinary Bitcoin RPC calls can spend your
