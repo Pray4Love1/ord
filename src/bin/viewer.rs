@@ -38,7 +38,7 @@ impl Viewer {
       DateTime::from_timestamp_millis(record.timestamp_ms as i64).unwrap_or_else(|| Utc::now());
 
     let summary = json!({
-      "creator": format!("{record:#x}"),
+      "creator": format!("{:#x}", record.creator),
       "block_height": record.block_height,
       "timestamp": timestamp.to_rfc3339(),
       "commitment": format!("0x{normalized}"),
