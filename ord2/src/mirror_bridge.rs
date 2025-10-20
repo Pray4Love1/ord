@@ -21,6 +21,7 @@ impl MirrorBridge {
   pub fn new(rpc_url: &str, verifier: Address, abi_json: &str) -> Result<Self> {
     let provider = Provider::<Http>::try_from(rpc_url)?;
     let provider = provider.with_sender(verifier);
+    let provider = Arc::new(provider);
     let abi: Abi = serde_json::from_str(abi_json)?;
     Ok(Self {
       contract: Contract::new(verifier, abi, provider),
@@ -42,6 +43,6 @@ impl MirrorBridge {
   }
 
   pub fn provider(&self) -> Arc<Provider<Http>> {
-    Arc::new(self.contract.client().clone())
+    self.contract.client().clone()
   }
 }
