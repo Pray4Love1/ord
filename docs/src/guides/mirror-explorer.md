@@ -64,10 +64,14 @@ Each proof results in a `post_proof()` call to the local verifier contract.
 In **Terminal B**:
 
 ```bash
-export RPC_URL=$RPC_URL
-export VERIFIER_ADDR=$VERIFIER_ADDR
+# Reuse the exact values exported in step 2
+export RPC_URL=http://127.0.0.1:8545
+export VERIFIER_ADDR=0xDeployedVerifierAddress
 cargo run --bin viewer_api
 ```
+
+Replace `0xDeployedVerifierAddress` with the verifier address printed during the
+deployment step above.
 
 The API listens on `http://127.0.0.1:8787`. Fetch a proof with:
 
