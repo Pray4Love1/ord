@@ -1,8 +1,10 @@
+import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 import { useState } from "react";
 import axios from "axios";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
-export default function App() {
+// Viewer Component (from master)
+function Viewer() {
   const [commitment, setCommitment] = useState("");
   const [data, setData] = useState(null);
   const [history, setHistory] = useState([]);
@@ -45,7 +47,7 @@ export default function App() {
           <ul className="space-y-1">
             {history.map((h, i) => (
               <li key={i} className="text-sm text-gray-400">
-                {h.commitment.slice(0, 14)}… block {h.block_height}
+                {h.commitment?.slice(0, 14)}… block {h.block_height}
               </li>
             ))}
           </ul>
@@ -66,5 +68,31 @@ export default function App() {
         </div>
       )}
     </div>
+  );
+}
+
+// Placeholder EcoView Page
+function EcoView() {
+  return (
+    <div className="min-h-screen bg-gray-950 text-gray-100 p-8">
+      <h1 className="text-3xl mb-6 font-bold">Ecosystem Overview</h1>
+      <p>Future analytics or network visualization will go here.</p>
+    </div>
+  );
+}
+
+// App Router
+export default function App() {
+  return (
+    <BrowserRouter>
+      <nav className="p-2 bg-gray-800 flex gap-4">
+        <Link to="/">Viewer</Link>
+        <Link to="/eco">Ecosystem</Link>
+      </nav>
+      <Routes>
+        <Route path="/" element={<Viewer />} />
+        <Route path="/eco" element={<EcoView />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
