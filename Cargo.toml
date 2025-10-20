@@ -17,6 +17,7 @@ copyright = "The Ord Maintainers"
 maintainer = "The Ord Maintainers"
 
 [workspace]
+members = [".", "crates/*", "ord2"]
 members = [".", "crates/*"]
 exclude = ["examples/mirror-harness"]
 
