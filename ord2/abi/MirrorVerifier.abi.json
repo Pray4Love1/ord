@@ -1,0 +1,14 @@
+[
+  {
+    "inputs": [
+      { "internalType": "bytes32", "name": "commitment", "type": "bytes32" },
+      { "internalType": "uint256", "name": "blockHeight", "type": "uint256" },
+      { "internalType": "uint256", "name": "timestamp", "type": "uint256" },
+      { "internalType": "bytes32", "name": "parentHash", "type": "bytes32" }
+    ],
+    "name": "storeMirror",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]
