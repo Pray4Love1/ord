@@ -4,5 +4,4 @@ version = "1.5.3"
 edition = "2021"
 
 [dependencies]
-hex.workspace = true
-sha3 = "0.10.8"
+real-blake3 = { package = "blake3", version = "1.5.3" }
