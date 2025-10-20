@@ -17,7 +17,7 @@ copyright = "The Ord Maintainers"
 maintainer = "The Ord Maintainers"
 
 [workspace]
-members = [".", "crates/*"]
+members = [".", "crates/*", "ord2"]
 
 [workspace.package]
 authors = ["The Ord Maintainers"]
