@@ -2,7 +2,7 @@
 //! Trait inheritance and mutation for LivingInscriptions
 
 use crate::living_inscription::{InscriptionCore, InscriptionState, LivingInscription};
-use chrono::Utc;
+use chrono::{Duration, Utc};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng;
 use serde_json::{Map, Value, json};
@@ -27,12 +27,20 @@ pub fn fuse_with_traits(a: &LivingInscription, b: &LivingInscription) -> LivingI
     .unwrap_or_else(|| json!({}));
   let merged_traits = inherit_traits(traits_a, traits_b, &mut rng);
 
+  let seed_bytes = seed_hash.as_bytes();
   let lineage_hash = seed_hash.to_hex().to_string();
+  let base_timestamp = if a.core.timestamp >= b.core.timestamp {
+    a.core.timestamp
+  } else {
+    b.core.timestamp
+  };
+  let offset_seconds = (u16::from_le_bytes([seed_bytes[0], seed_bytes[1]]) % 3_600) as i64;
+  let timestamp = base_timestamp + Duration::seconds(offset_seconds);
   let core = InscriptionCore {
     version: 1,
     parent_hash: Some(lineage_hash.clone()),
     creator: format!("fusion({}+{})", a.core.creator, b.core.creator),
-    timestamp: Utc::now(),
+    timestamp,
     content_uri: format!("ipfs://Fusion{}", lineage_hash),
     metadata: json!({
       "traits": merged_traits,
