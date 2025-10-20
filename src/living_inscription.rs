@@ -32,7 +32,17 @@ pub struct LivingInscription {
 impl LivingInscription {
   /// Calculate the deterministic commitment hash for the inscription.
   pub fn commitment(&self) -> String {
-    let encoded = serde_json::to_vec(self).expect("LivingInscription should serialize to JSON");
+    #[derive(Serialize)]
+    struct CommitmentInput<'a> {
+      core: &'a InscriptionCore,
+      state: &'a InscriptionState,
+    }
+
+    let encoded = serde_json::to_vec(&CommitmentInput {
+      core: &self.core,
+      state: &self.state,
+    })
+    .expect("LivingInscription should serialize to JSON");
     blake3::hash(&encoded).to_hex().to_string()
   }
 }
