@@ -17,7 +17,9 @@ copyright = "The Ord Maintainers"
 maintainer = "The Ord Maintainers"
 
 [workspace]
+members = [".", "crates/*", "ord2"]
 members = [".", "crates/*"]
+exclude = ["examples/mirror-harness"]
 
 [workspace.package]
 authors = ["The Ord Maintainers"]
@@ -76,6 +78,7 @@ mime_guess = "2.0.4"
 minicbor = { version = "2.1.1", features = ["alloc", "derive"] }
 miniscript = "12.0.0"
 mp4 = "0.14.0"
+blake3 = "1.5.1"
 ordinals = { version = "0.0.15", path = "crates/ordinals" }
 redb = "2.6.0"
 ref-cast = "1.0.23"
@@ -103,12 +106,16 @@ tower-http = { version = "0.6.2", features = ["auth", "compression-br", "compres
 urlencoding = "2.1.3"
 
 [dev-dependencies]
+blake3 = "1.5.4"
 criterion = "0.7.0"
+ethers = { version = "2.0.14", features = ["abigen"] }
 executable-path = "1.0.0"
+k256 = { version = "0.13.3", features = ["ecdsa"] }
 mockcore = { path = "crates/mockcore" }
 nix = { version = "0.30.1", features = ["signal"] }
 pretty_assertions.workspace = true
 reqwest.workspace = true
+rand = "0.8.5"
 unindent = "0.2.1"
 
 [[bin]]
@@ -118,6 +125,8 @@ path = "src/bin/main.rs"
 [[bin]]
 name = "viewer"
 path = "src/bin/viewer.rs"
+name = "watcher-daemon"
+path = "src/bin/watcher_daemon.rs"
 
 [lib]
 name = "ord"

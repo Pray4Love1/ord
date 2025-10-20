@@ -1,6 +1,32 @@
 Changelog
 =========
 
+## [2.0.0] - 2025-10-15
+
+Ord 2.0 is the first major release since the 0.x line and focuses on stability
+and operability for large indexers.
+
+### Added
+- New unified indexer with resumable syncs and faster reorg recovery.
+- Comprehensive HTTP API documentation and versioned endpoints.
+- Guided offer flow with PSBT submission for rune and inscription trades.
+- `wallet sweep` and `wallet connect` utilities for dust cleanup and hardware
+  wallet support.
+
+### Changed
+- Default configuration now enables JSON responses across explorer endpoints.
+- Minimum supported Rust version is 1.85.0 and Bitcoin Core is v29.
+- The index database layout has been compacted to reduce disk usage by ~30%.
+
+### Deprecated
+- Legacy `/v1/` explorer routes are now deprecated and will be removed in a
+  future minor release. Use the versioned `/api/` routes instead.
+
+### Fixed
+- Addressed intermittent websocket disconnects when broadcasting events from
+  long-running servers.
+- Resolved rare race conditions when batching reveal transactions.
+
 ## [0.23.3] - 2025-09-19
 
 ### Added
