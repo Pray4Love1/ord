@@ -45,12 +45,29 @@ pub fn simulate_interaction(
       // Slightly dampen the loser’s energy trait.
       let mut evolved_a = evolve(a, EvolutionTrigger::MoodShift("dominant".into()));
       let mut evolved_b = evolve(b, EvolutionTrigger::MoodShift("suppressed".into()));
-      evolved_b.core.metadata["traits"]["energy"] = serde_json::json!(
-        0.8
-          * evolved_b.core.metadata["traits"]["energy"]
-            .as_f64()
-            .unwrap_or(1.0)
-      );
+
+      // Guard against missing or malformed trait metadata before dampening energy.
+      if !evolved_b.core.metadata.is_object() {
+        evolved_b.core.metadata = serde_json::json!({});
+      }
+
+      if let Some(meta) = evolved_b.core.metadata.as_object_mut() {
+        let traits = meta
+          .entry("traits".to_string())
+          .or_insert_with(|| serde_json::json!({}));
+
+        if !traits.is_object() {
+          *traits = serde_json::json!({});
+        }
+
+        if let Some(traits_map) = traits.as_object_mut() {
+          let current_energy = traits_map
+            .get("energy")
+            .and_then(|energy| energy.as_f64())
+            .unwrap_or(1.0);
+          traits_map.insert("energy".to_string(), serde_json::json!(0.8 * current_energy));
+        }
+      }
       vec![evolved_a, evolved_b]
     }
     Interaction::Fusion => {
