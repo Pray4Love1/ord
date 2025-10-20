@@ -11,8 +11,6 @@ use ethers::utils::keccak256;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
-use crate::living_inscription::LivingInscription;
-
 const PROOF_TYPEHASH: &[u8] = b"MirrorProof(bytes32 inscriptionCommitment,address creator,uint64 blockHeight,string mirrorChain,uint64 timestampMs)";
 const DOMAIN_TYPEHASH: &[u8] = b"EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)";
 const NAME_HASH: &[u8] = b"MirrorVerifier";
@@ -119,16 +117,20 @@ impl MirrorProof {
     }
 }
 
-/// Builds a new proof from a LivingInscription object.
-pub fn build_proof(ins: &LivingInscription, mirror_chain: &str) -> Result<MirrorProof> {
+/// Builds a new proof from inscription metadata.
+pub fn build_proof(
+    inscription_commitment: &str,
+    creator: &str,
+    block_height: u64,
+    signature: &str,
+    mirror_chain: &str,
+) -> Result<MirrorProof> {
     Ok(MirrorProof {
-        inscription_commitment: ins.commitment(),
-        creator: ins.core
-            .creator
-            .clone(),
-        block_height: ins.state.block_height,
+        inscription_commitment: inscription_commitment.to_string(),
+        creator: creator.to_string(),
+        block_height,
         mirror_chain: mirror_chain.to_string(),
-        signature: ins.signature.clone(),
+        signature: signature.to_string(),
         timestamp_ms: Utc::now().timestamp_millis() as u64,
     })
 }
