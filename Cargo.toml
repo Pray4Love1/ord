@@ -18,6 +18,7 @@ maintainer = "The Ord Maintainers"
 
 [workspace]
 members = [".", "crates/*"]
+exclude = ["examples/mirror-harness"]
 
 [workspace.package]
 authors = ["The Ord Maintainers"]
