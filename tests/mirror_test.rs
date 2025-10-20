@@ -10,7 +10,7 @@ use ethers::{
     utils::keccak256,
 };
 use k256::ecdsa::{signature::Signer, Signature, SigningKey};
-use std::sync::Arc;
+use std::{env, sync::Arc};
 
 mod living_inscription;
 mod mirror_bridge;
@@ -61,8 +61,15 @@ async fn simulate_full_flow() -> anyhow::Result<()> {
     let proof = build_proof(&ins, "ethereum-sepolia");
     println!("🪞 Mirror proof: {}", serde_json::to_string_pretty(&proof)?);
 
-    // Connect to local JSON-RPC (e.g., Anvil)
-    let provider = Provider::<Http>::try_from("http://localhost:8545")?;
+    // Optionally connect to local JSON-RPC (e.g., Anvil)
+    let Some(rpc_url) = env::var("MIRROR_TEST_RPC").ok().filter(|v| !v.is_empty()) else {
+        println!(
+            "Skipping JSON-RPC interaction: set MIRROR_TEST_RPC=http://localhost:8545 to enable"
+        );
+        return Ok(());
+    };
+
+    let provider = Provider::<Http>::try_from(rpc_url.as_str())?;
     let chain_id = provider.get_chainid().await?;
     println!("Connected to chain id {}", chain_id);
 
