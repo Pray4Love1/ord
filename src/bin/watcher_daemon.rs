@@ -4,7 +4,7 @@
 
 use std::time::Duration;
 
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use chrono::Utc;
 use ord::{
   living_inscription::{InscriptionCore, InscriptionState, LivingInscription},
@@ -63,7 +63,14 @@ impl Watcher {
       .json::<serde_json::Value>()
       .await?;
 
-    let height = resp["result"].as_u64().unwrap_or_default();
+    if let Some(error) = resp.get("error").filter(|error| !error.is_null()) {
+      return Err(anyhow!("bitcoin RPC getblockcount error: {error}"));
+    }
+
+    let height = resp
+      .get("result")
+      .and_then(|value| value.as_u64())
+      .ok_or_else(|| anyhow!("bitcoin RPC getblockcount missing numeric result"))?;
     println!("⛓️  Checking Bitcoin block {height}");
 
     // Replace this stub with real Ordinal detection logic.
