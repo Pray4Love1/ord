@@ -1,8 +1,12 @@
 use crate::LivingInscription;
+use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use serde_json::Map;
-use sled::IVec;
-use std::{path::PathBuf, sync::Arc};
+use std::{
+  fs,
+  path::PathBuf,
+  sync::{Arc, Mutex},
+};
 use thiserror::Error;
 
 /// Stored representation used by the viewer API and CLI.
@@ -34,21 +38,11 @@ impl From<LivingInscription> for MirrorRecord {
   }
 }
 
-impl MirrorRecord {
-  fn to_bytes(&self) -> anyhow::Result<Vec<u8>> {
-    Ok(serde_json::to_vec(self)?)
-  }
-
-  fn from_bytes(bytes: &IVec) -> anyhow::Result<Self> {
-    Ok(serde_json::from_slice(bytes)?)
-  }
-}
-
 /// Errors produced by the mirror bridge.
 #[derive(Debug, Error)]
 pub enum BridgeError {
   #[error("database error: {0}")]
-  Database(#[from] sled::Error),
+  Database(#[from] rusqlite::Error),
   #[error("serialization error: {0}")]
   Serialization(#[from] serde_json::Error),
 }
@@ -56,54 +50,105 @@ pub enum BridgeError {
 /// Lightweight storage bridge shared by the watcher, API, and viewer.
 #[derive(Clone)]
 pub struct MirrorBridge {
-  db: Arc<sled::Db>,
+  conn: Arc<Mutex<Connection>>,
+  path: Arc<PathBuf>,
 }
 
 impl MirrorBridge {
   pub fn new(path: impl Into<PathBuf>) -> anyhow::Result<Self> {
     let path = path.into();
-    let db = sled::open(path)?;
-    Ok(Self { db: Arc::new(db) })
-  }
+    if let Some(parent) = path.parent() {
+      if !parent.as_os_str().is_empty() {
+        fs::create_dir_all(parent)?;
+      }
+    }
 
-  fn key(commitment: &str) -> Vec<u8> {
-    commitment.as_bytes().to_vec()
+    let conn = Connection::open(&path)?;
+    Self::init_schema(&conn)?;
+
+    Ok(Self {
+      conn: Arc::new(Mutex::new(conn)),
+      path: Arc::new(path),
+    })
   }
 
   pub fn store(&self, inscription: &LivingInscription) -> Result<MirrorRecord, BridgeError> {
     let record: MirrorRecord = inscription.clone().into();
-    let key = Self::key(&record.commitment);
-    let value = record.to_bytes().map_err(BridgeError::Serialization)?;
-    self.db.insert(key, value)?;
-    self.db.flush()?;
+    let json = serde_json::to_string(&record).map_err(BridgeError::Serialization)?;
+
+    let conn = self.conn.lock().expect("mirror bridge mutex poisoned");
+    conn.execute(
+      "INSERT INTO mirror_records (commitment, block_height, record_json)
+       VALUES (?1, ?2, ?3)
+       ON CONFLICT(commitment) DO UPDATE SET
+         block_height = excluded.block_height,
+         record_json = excluded.record_json",
+      params![&record.commitment, record.block_height as i64, json],
+    )?;
     Ok(record)
   }
 
   pub fn get(&self, commitment: &str) -> anyhow::Result<Option<MirrorRecord>> {
-    let Some(value) = self.db.get(Self::key(commitment))? else {
-      return Ok(None);
-    };
-    MirrorRecord::from_bytes(&value)
-      .map(Some)
-      .map_err(Into::into)
+    let conn = self.conn.lock().expect("mirror bridge mutex poisoned");
+    let record: Option<String> = conn
+      .query_row(
+        "SELECT record_json FROM mirror_records WHERE commitment = ?1",
+        params![commitment],
+        |row| row.get(0),
+      )
+      .optional()?;
+
+    record
+      .map(|json| serde_json::from_str(&json).map_err(anyhow::Error::from))
+      .transpose()
   }
 
   pub fn list(&self) -> anyhow::Result<Vec<MirrorRecord>> {
+    let conn = self.conn.lock().expect("mirror bridge mutex poisoned");
+    let mut stmt = conn.prepare(
+      "SELECT record_json FROM mirror_records ORDER BY block_height ASC, commitment ASC",
+    )?;
+    let records_iter = stmt.query_map([], |row| {
+      let json: String = row.get(0)?;
+      serde_json::from_str::<MirrorRecord>(&json).map_err(|err| {
+        rusqlite::Error::FromSqlConversionFailure(
+          json.len(),
+          rusqlite::types::Type::Text,
+          Box::new(err),
+        )
+      })
+    })?;
+
     let mut records = Vec::new();
-    for result in self.db.iter() {
-      let (_, value) = result?;
-      records.push(MirrorRecord::from_bytes(&value)?);
+    for record in records_iter {
+      records.push(record?);
     }
-    records.sort_by_key(|record| record.block_height);
     Ok(records)
   }
 
   pub fn delete(&self, commitment: &str) -> anyhow::Result<bool> {
-    Ok(self.db.remove(Self::key(commitment))?.is_some())
+    let conn = self.conn.lock().expect("mirror bridge mutex poisoned");
+    let rows = conn.execute(
+      "DELETE FROM mirror_records WHERE commitment = ?1",
+      params![commitment],
+    )?;
+    Ok(rows > 0)
   }
 
   pub fn path(&self) -> anyhow::Result<PathBuf> {
-    Ok(self.db.path().to_path_buf())
+    Ok(self.path.as_ref().clone())
+  }
+
+  fn init_schema(conn: &Connection) -> Result<(), rusqlite::Error> {
+    conn.execute(
+      "CREATE TABLE IF NOT EXISTS mirror_records (
+         commitment TEXT PRIMARY KEY,
+         block_height INTEGER NOT NULL,
+         record_json TEXT NOT NULL
+       )",
+      [],
+    )?;
+    Ok(())
   }
 }
 
