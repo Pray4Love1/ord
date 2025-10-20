@@ -96,6 +96,7 @@ use {
   tokio::{runtime::Runtime, task},
 };
 
+pub use self::living_inscription::{InscriptionCore, InscriptionState, LivingInscription};
 pub use self::{
   chain::Chain,
   fee_rate::FeeRate,
@@ -119,13 +120,17 @@ mod blocktime;
 pub mod chain;
 pub mod decimal;
 mod deserialize_from_str;
+pub mod ecosystem;
 mod error;
+pub mod evolution;
 mod fee_rate;
 mod fund_raw_transaction;
+pub mod genetics;
 pub mod index;
 mod inscriptions;
 mod into_u64;
 mod into_usize;
+pub mod living_inscription;
 mod macros;
 mod object;
 mod option_ext;
