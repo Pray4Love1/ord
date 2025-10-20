@@ -126,6 +126,7 @@ pub mod index;
 mod inscriptions;
 mod into_u64;
 mod into_usize;
+pub mod living_inscription;
 mod macros;
 mod object;
 mod option_ext;
