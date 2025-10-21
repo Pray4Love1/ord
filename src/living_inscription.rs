@@ -1,3 +1,4 @@
+```rust
 //! Types describing living inscriptions used by both viewer and protocol layers.
 
 use chrono::{DateTime, Utc};
@@ -54,3 +55,4 @@ impl LivingInscription {
         format!("{}:{}", self.meta.creator, self.meta.timestamp.timestamp())
     }
 }
+```

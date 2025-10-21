@@ -122,6 +122,7 @@ mod deserialize_from_str;
 mod error;
 mod fee_rate;
 mod fund_raw_transaction;
+pub mod fusion;
 pub mod index;
 mod inscriptions;
 mod into_u64;
