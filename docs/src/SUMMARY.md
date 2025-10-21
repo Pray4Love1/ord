@@ -22,6 +22,8 @@ Summary
 - [Contributing](contributing.md)
 - [Donate](donate.md)
 - [Guides](guides.md)
+  - [Ord 2.0 Upgrade Guide](ord-2.0-upgrade-guide.md)
+  - [Ord 2.0 Operations Manual](ord-2.0-operations-manual.md)
   - [API](guides/api.md)
   - [Batch Inscribing](guides/batch-inscribing.md)
   - [Collecting](guides/collecting.md)

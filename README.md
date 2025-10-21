@@ -19,13 +19,31 @@
 `ord` is an index, block explorer, and command-line wallet. It is experimental
 software with no warranty. See [LICENSE](LICENSE) for more details.
 
+Ord 2.0 introduces a refreshed experience across the stack:
+
+- A unified indexer that keeps up with deep reorgs and prunes stale data faster
+  to keep long-running nodes lean.
+- Streamlined rune and inscription trading flows with PSBT offer submissions
+  and a guided marketplace workflow.
+- Wallet quality-of-life improvements such as automatic change control,
+  hardware wallet compatibility, and sweeping utilities for reclaiming dust.
+- A battle-tested HTTP API with documented versioning and CORS-friendly
+  defaults for building apps on top of ordinals.
+
+For a quick checklist of migration tasks read the
+[Ord 2.0 upgrade guide](docs/src/ord-2.0-upgrade-guide.md). Operators looking to
+deep-dive into internals, new tuning levers, and operational playbooks can head
+to the [Ord 2.0 operations manual](docs/src/ord-2.0-operations-manual.md), an
+extended reference that captures the why behind each architectural change.
+
 Ordinal theory imbues satoshis with numismatic value, allowing them to
 be collected and traded as curios.
 
 Ordinal numbers are serial numbers for satoshis, assigned in the order in which
 they are mined, and preserved across transactions.
 
-See [the docs](https://docs.ordinals.com) for documentation and guides.
+See [the docs](https://docs.ordinals.com) for documentation and guides, or jump
+directly into the [Ord 2.0 upgrade guide](docs/src/ord-2.0-upgrade-guide.md).
 
 See [the BIP](bip.mediawiki) for a technical description of the assignment and
 transfer algorithm.
