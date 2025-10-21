@@ -1,58 +1,54 @@
 ```rust
-//! Types describing living inscriptions used by both viewer and protocol layers.
-
+use blake3::Hasher;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
-/// Minimal metadata for viewer and indexing.
-#[derive(Clone, Debug, Deserialize, Serialize)]
+/// Core immutable attributes of a living inscription.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct InscriptionCore {
-    /// URI pointing at the inscription's current content.
-    pub content_uri: String,
-    /// Parent commitment hash linking this inscription to its lineage.
-    pub parent_hash: Option<String>,
+  pub version: u32,
+  pub parent_hash: Option<String>,
+  pub creator: String,
+  pub timestamp: DateTime<Utc>,
+  pub content_uri: String,
+  pub metadata: Value,
 }
 
-impl InscriptionCore {
-    /// Construct a new [`InscriptionCore`] with the provided content URI and optional parent hash.
-    pub fn new(content_uri: impl Into<String>, parent_hash: Option<impl Into<String>>) -> Self {
-        Self {
-            content_uri: content_uri.into(),
-            parent_hash: parent_hash.map(Into::into),
-        }
-    }
-}
-
-/// Full metadata with creator, version, and timestamp for verification.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InscriptionMeta {
-    pub version: u32,
-    pub creator: String,
-    pub timestamp: DateTime<Utc>,
-    pub metadata: serde_json::Value,
-}
-
-/// Live state describing on-chain and external context.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Mutable on-chain and emotional state of an inscription.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct InscriptionState {
-    pub block_height: u64,
-    pub external_entropy: Option<String>,
-    pub mood: Option<String>,
-    pub mirror_hash: Option<String>,
+  pub block_height: u64,
+  pub external_entropy: Option<String>,
+  pub mood: Option<String>,
+  pub mirror_hash: Option<String>,
 }
 
-/// A signed living inscription tying everything together.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// The complete living inscription entity with a verifiable signature.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct LivingInscription {
-    pub core: InscriptionCore,
-    pub meta: InscriptionMeta,
-    pub state: InscriptionState,
-    pub signature: String,
+  pub core: InscriptionCore,
+  pub state: InscriptionState,
+  pub signature: String,
 }
 
 impl LivingInscription {
-    pub fn id(&self) -> String {
-        format!("{}:{}", self.meta.creator, self.meta.timestamp.timestamp())
-    }
+  /// Generate a deterministic commitment hash for this living inscription.
+  pub fn commitment(&self) -> String {
+    let core = serde_json::to_vec(&self.core).expect("core serialization");
+    let state = serde_json::to_vec(&self.state).expect("state serialization");
+
+    let mut hasher = Hasher::new();
+    hasher.update(&core);
+    hasher.update(&state);
+    hasher.update(self.signature.as_bytes());
+
+    hasher.finalize().to_hex().to_string()
+  }
+
+  /// Derive a readable identifier for display or indexing.
+  pub fn id(&self) -> String {
+    format!("{}:{}", self.core.creator, self.core.timestamp.timestamp())
+  }
 }
 ```
