@@ -120,6 +120,7 @@ pub mod chain;
 pub mod decimal;
 mod deserialize_from_str;
 mod error;
+pub mod evolution;
 mod fee_rate;
 mod fund_raw_transaction;
 pub mod genetics;
