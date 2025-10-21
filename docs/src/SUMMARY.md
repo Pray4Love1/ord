@@ -28,6 +28,7 @@ Summary
   - [Collecting](guides/collecting.md)
     - [Sparrow Wallet](guides/collecting/sparrow-wallet.md)
   - [Explorer](guides/explorer.md)
+  - [Mirror Explorer Quickstart](guides/mirror-explorer.md)
   - [Moderation](guides/moderation.md)
   - [Reindexing](guides/reindexing.md)
   - [Sat Hunting](guides/sat-hunting.md)
