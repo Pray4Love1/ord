@@ -1,5 +1,5 @@
+```rust
 use std::sync::Arc;
-
 use anyhow::Result;
 use ethers::{
   abi::Abi,
@@ -46,3 +46,4 @@ impl MirrorBridge {
     self.contract.client().clone()
   }
 }
+```

@@ -1,3 +1,4 @@
+```rust
 use anyhow::{Context, Result};
 use ethers::types::H256;
 use ord2::{living_inscription::LivingInscription, mirror_bridge::MirrorBridge};
@@ -43,3 +44,4 @@ fn print_json(inscription: &LivingInscription) -> Result<()> {
   println!("{}", serde_json::to_string_pretty(&json)?);
   Ok(())
 }
+```

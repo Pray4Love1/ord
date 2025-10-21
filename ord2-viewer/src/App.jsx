@@ -1,9 +1,10 @@
+```jsx
 import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 import { useState } from "react";
 import axios from "axios";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
-// Viewer Component (from master)
+// Viewer Component
 function Viewer() {
   const [commitment, setCommitment] = useState("");
   const [data, setData] = useState(null);
@@ -14,7 +15,7 @@ function Viewer() {
       const res = await axios.get(`/mirror/${commitment}`);
       setData(res.data);
       setHistory((h) => [res.data, ...h]);
-    } catch (e) {
+    } catch {
       alert("No record found or RPC error");
     }
   }
@@ -71,7 +72,7 @@ function Viewer() {
   );
 }
 
-// Placeholder EcoView Page
+// Ecosystem Page
 function EcoView() {
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 p-8">
@@ -96,3 +97,4 @@ export default function App() {
     </BrowserRouter>
   );
 }
+```
