@@ -35,6 +35,9 @@ For a quick checklist of migration tasks read the
 deep-dive into internals, new tuning levers, and operational playbooks can head
 to the [Ord 2.0 operations manual](docs/src/ord-2.0-operations-manual.md), an
 extended reference that captures the why behind each architectural change.
+If you're upgrading from an earlier release, read the
+[Ord 2.0 upgrade guide](docs/src/ord-2.0-upgrade-guide.md) for migration
+steps and configuration changes.
 
 Ordinal theory imbues satoshis with numismatic value, allowing them to
 be collected and traded as curios.

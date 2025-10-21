@@ -29,6 +29,7 @@ use {
     axum::AxumAcceptor,
     caches::DirCache,
   },
+  serde_json::json,
   std::{str, sync::Arc},
   tokio_stream::StreamExt,
   tower_http::{
@@ -236,6 +237,7 @@ impl Server {
         )
         .route("/inscriptions/{page}", get(Self::inscriptions_paginated))
         .route("/install.sh", get(Self::install_script))
+        .route("/mirror/list", get(Self::mirror_list))
         .route("/offer", post(Self::offer))
         .route("/offers", get(Self::offers))
         .route("/ordinal/{sat}", get(Self::ordinal))
@@ -1083,6 +1085,16 @@ impl Server {
 
   async fn install_script() -> Redirect {
     Redirect::to("https://raw.githubusercontent.com/ordinals/ord/master/install.sh")
+  }
+
+  async fn mirror_list() -> Json<Vec<serde_json::Value>> {
+    let sample = vec![json!({
+      "commitment": "0xabc123...",
+      "traits": {"color": "red", "energy": 0.9},
+      "mood": "energized",
+    })];
+
+    Json(sample)
   }
 
   async fn offer(

@@ -26,6 +26,9 @@ and adopt the latest functionality safely.
   exceeds your longest historical reorg plus an additional buffer for validation.
 - Notify downstream consumers (marketplace integrations, dashboards, bots) of
   the upgrade window so they can expect brief API interruptions.
+- Back up your `.ord` data directory and any custom configuration files.
+- Review the [2.0.0 changelog entry](../../CHANGELOG.md#200---2025-10-15) for an
+  overview of the major changes.
 
 ## Database Migration
 
@@ -50,6 +53,10 @@ will automatically perform an in-place migration.
 2. Make a copy of your data directory (if you have not already done so):
    ```sh
    cp -a ~/.ord ~/.ord.backup-$(date +%Y%m%d)
+1. Stop any running `ord` processes.
+2. Make a copy of your data directory:
+   ```sh
+   cp -r ~/.ord ~/.ord.backup-$(date +%Y%m%d)
    ```
 3. Start `ord` 2.0 with the `--reindex` flag if you run archival infrastructure
    or operate close to the chain tip:
@@ -145,6 +152,27 @@ management. Use the following steps to transition wallets safely.
 
 ## Explorer and API Updates
 
+## Wallet Enhancements
+
+Ord 2.0 refines wallet ergonomics while staying anchored to Bitcoin Core for key
+management.
+
+- Use `ord wallet sweep` to consolidate dust and recover stranded inscriptions.
+- Continue to manage hardware wallets through Bitcoin Core or external tools;
+  Ord 2.0 does not add a dedicated `wallet connect` command.
+- Create PSBT offers with `ord wallet offer create --inscription <id> --amount
+  <sats> --fee-rate <rate>` and optionally `--submit <url>` to post them to a
+  marketplace.
+- Accept incoming offers with `ord wallet offer accept --psbt <base64>
+  --inscription <id> --amount <sats>` to sign and broadcast the finalized
+  transaction.
+
+Continue to keep ordinal and cardinal funds separated. Bitcoin Core still does
+not track inscription provenance and ordinary Bitcoin RPC calls can spend your
+collectibles inadvertently.
+
+## Explorer & API Updates
+
 - Explorer endpoints now default to JSON output. Pass `format=html` when you
   need the legacy template rendering.
 - Deprecated `/v1/` endpoints remain functional for now but plan to migrate to
@@ -172,6 +200,8 @@ When migrating bots or dashboards, request the JSON schema once and cache it
 locally; 2.0 ships with a stable `schemaVersion` field to allow validation.
 
 ## Operations Runbook
+
+## Operational Tips
 
 - Monitor disk usage during the first start; pruning stale rows can briefly
   spike IO.
@@ -220,3 +250,9 @@ locally; 2.0 ships with a stable `schemaVersion` field to allow validation.
 - Join the [Ordinals Discord](https://discord.gg/ordinals) or open a discussion
   on [GitHub](https://github.com/ordinals/ord/discussions) if you run into
   issues while upgrading.
+
+## Need Help?
+
+Join the [Ordinals Discord](https://discord.gg/ordinals) or open a discussion on
+[GitHub](https://github.com/ordinals/ord/discussions) if you run into issues
+while upgrading.
