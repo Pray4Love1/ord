@@ -1,8 +1,10 @@
+```rust
 use blake3::Hasher;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+/// Core immutable attributes of a living inscription.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct InscriptionCore {
   pub version: u32,
@@ -13,6 +15,7 @@ pub struct InscriptionCore {
   pub metadata: Value,
 }
 
+/// Mutable on-chain and emotional state of an inscription.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct InscriptionState {
   pub block_height: u64,
@@ -21,6 +24,7 @@ pub struct InscriptionState {
   pub mirror_hash: Option<String>,
 }
 
+/// The complete living inscription entity with a verifiable signature.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct LivingInscription {
   pub core: InscriptionCore,
@@ -41,4 +45,10 @@ impl LivingInscription {
 
     hasher.finalize().to_hex().to_string()
   }
+
+  /// Derive a readable identifier for display or indexing.
+  pub fn id(&self) -> String {
+    format!("{}:{}", self.core.creator, self.core.timestamp.timestamp())
+  }
 }
+```
