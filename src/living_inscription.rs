@@ -1,3 +1,8 @@
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+
+/// Immutable core data for a living inscription.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 ```rust
 use blake3::Hasher;
 use chrono::{DateTime, Utc};
@@ -12,6 +17,11 @@ pub struct InscriptionCore {
   pub creator: String,
   pub timestamp: DateTime<Utc>,
   pub content_uri: String,
+  pub metadata: serde_json::Value,
+}
+
+/// Mutable state for a living inscription.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
   pub metadata: Value,
 }
 
@@ -24,6 +34,8 @@ pub struct InscriptionState {
   pub mirror_hash: Option<String>,
 }
 
+/// A living inscription containing immutable and mutable data with a signature.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 /// The complete living inscription entity with a verifiable signature.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct LivingInscription {
@@ -33,6 +45,22 @@ pub struct LivingInscription {
 }
 
 impl LivingInscription {
+  /// Calculate the deterministic commitment hash for the inscription.
+  pub fn commitment(&self) -> String {
+    #[derive(Serialize)]
+    struct CommitmentInput<'a> {
+      core: &'a InscriptionCore,
+      state: &'a InscriptionState,
+    }
+
+    let encoded = serde_json::to_vec(&CommitmentInput {
+      core: &self.core,
+      state: &self.state,
+    })
+    .expect("LivingInscription should serialize to JSON");
+    blake3::hash(&encoded).to_hex().to_string()
+  }
+}
   /// Generate a deterministic commitment hash for this living inscription.
   pub fn commitment(&self) -> String {
     let core = serde_json::to_vec(&self.core).expect("core serialization");
