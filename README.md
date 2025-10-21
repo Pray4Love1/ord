@@ -30,6 +30,11 @@ Ord 2.0 introduces a refreshed experience across the stack:
 - A battle-tested HTTP API with documented versioning and CORS-friendly
   defaults for building apps on top of ordinals.
 
+For a quick checklist of migration tasks read the
+[Ord 2.0 upgrade guide](docs/src/ord-2.0-upgrade-guide.md). Operators looking to
+deep-dive into internals, new tuning levers, and operational playbooks can head
+to the [Ord 2.0 operations manual](docs/src/ord-2.0-operations-manual.md), an
+extended reference that captures the why behind each architectural change.
 If you're upgrading from an earlier release, read the
 [Ord 2.0 upgrade guide](docs/src/ord-2.0-upgrade-guide.md) for migration
 steps and configuration changes.

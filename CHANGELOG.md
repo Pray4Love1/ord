@@ -27,6 +27,16 @@ and operability for large indexers.
   long-running servers.
 - Resolved rare race conditions when batching reveal transactions.
 
+### Operations
+- Added structured JSON logging with consistent `target` fields for indexer and
+  wallet events to simplify ingestion into observability stacks.
+- Exposed a `/status` endpoint that surfaces sync height, queue depth, and
+  journal tip metadata for automated health checks.
+
+### Documentation
+- Published the Ord 2.0 operations manual with deep dives into the indexer
+  architecture, wallet workflows, and operational playbooks.
+
 ## [0.23.3] - 2025-09-19
 
 ### Added
