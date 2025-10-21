@@ -18,6 +18,8 @@ maintainer = "The Ord Maintainers"
 
 [workspace]
 members = [".", "crates/*", "ord2"]
+members = [".", "crates/*"]
+exclude = ["examples/mirror-harness"]
 
 [workspace.package]
 authors = ["The Ord Maintainers"]
@@ -76,6 +78,7 @@ mime_guess = "2.0.4"
 minicbor = { version = "2.1.1", features = ["alloc", "derive"] }
 miniscript = "12.0.0"
 mp4 = "0.14.0"
+blake3 = "1.5.1"
 ordinals = { version = "0.0.15", path = "crates/ordinals" }
 redb = "2.6.0"
 ref-cast = "1.0.23"
@@ -85,6 +88,7 @@ rss = "2.0.1"
 rust-embed = "8.0.0"
 rustls = { version  = "0.23.20", features = ["ring"] }
 rustls-acme = { version = "0.14.0", features = ["axum"] }
+ethers = { version = "2.0.14", features = ["abigen", "contract", "providers"] }
 secp256k1.workspace = true
 serde-hex = "0.1.0"
 serde.workspace = true
@@ -95,24 +99,34 @@ sha3 = "0.10.8"
 snafu = "0.8.3"
 sysinfo = "0.37.0"
 tempfile.workspace = true
-tokio = { version = "1.43.0", features = ["rt-multi-thread"] }
+tokio = { version = "1.43.0", features = ["macros", "rt-multi-thread"] }
 tokio-stream = "0.1.9"
 tokio-util = {version = "0.7.3", features = ["compat"] }
 tower-http = { version = "0.6.2", features = ["auth", "compression-br", "compression-gzip", "cors", "set-header"] }
 urlencoding = "2.1.3"
 
 [dev-dependencies]
+blake3 = "1.5.4"
 criterion = "0.7.0"
+ethers = { version = "2.0.14", features = ["abigen"] }
 executable-path = "1.0.0"
+k256 = { version = "0.13.3", features = ["ecdsa"] }
 mockcore = { path = "crates/mockcore" }
 nix = { version = "0.30.1", features = ["signal"] }
 pretty_assertions.workspace = true
 reqwest.workspace = true
+rand = "0.8.5"
 unindent = "0.2.1"
 
 [[bin]]
 name = "ord"
 path = "src/bin/main.rs"
+
+[[bin]]
+name = "viewer"
+path = "src/bin/viewer.rs"
+name = "watcher-daemon"
+path = "src/bin/watcher_daemon.rs"
 
 [lib]
 name = "ord"

@@ -1,102 +1,100 @@
-import { useMemo, useState } from 'react';
+```jsx
+import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
+import { useState } from "react";
+import axios from "axios";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
-const emptyRecord = {
-  commitment: '',
-  block_height: 0,
-  timestamp: '',
-  parent_hash: null,
-  entropy: 0,
-  metadata: {}
-};
-
-export default function App() {
-  const [commitment, setCommitment] = useState('');
-  const [record, setRecord] = useState(emptyRecord);
+// Viewer Component
+function Viewer() {
+  const [commitment, setCommitment] = useState("");
+  const [data, setData] = useState(null);
   const [history, setHistory] = useState([]);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
 
-  const orderedHistory = useMemo(() => history.slice().reverse(), [history]);
-
-  async function handleSubmit(event) {
-    event.preventDefault();
-    if (!commitment) return;
-
-    setLoading(true);
-    setError('');
-
+  async function fetchMirror() {
     try {
-      const response = await fetch(`/mirror/${commitment}`);
-      if (!response.ok) {
-        throw new Error('Mirror not found');
-      }
-
-      const payload = await response.json();
-      setRecord(payload);
-      setHistory((current) => {
-        const updated = current.filter((item) => item.commitment !== payload.commitment);
-        updated.push({ ...payload, at: new Date().toISOString() });
-        return updated.slice(-20);
-      });
-    } catch (err) {
-      setError(err.message);
-      setRecord(emptyRecord);
-    } finally {
-      setLoading(false);
+      const res = await axios.get(`/mirror/${commitment}`);
+      setData(res.data);
+      setHistory((h) => [res.data, ...h]);
+    } catch {
+      alert("No record found or RPC error");
     }
   }
 
   return (
-    <div className="app">
-      <header>
-        <h1>Living Ordinal Viewer</h1>
-        <p>Trace mirrored inscriptions as the watcher breathes life into the verifier.</p>
-      </header>
+    <div className="min-h-screen bg-gray-950 text-gray-100 p-8">
+      <h1 className="text-3xl mb-6 font-bold">Living Ordinal Explorer</h1>
+      <input
+        className="p-2 bg-gray-800 rounded mr-2"
+        placeholder="Commitment (0x...)"
+        value={commitment}
+        onChange={(e) => setCommitment(e.target.value)}
+      />
+      <button onClick={fetchMirror} className="px-3 py-2 bg-indigo-600 rounded">
+        View
+      </button>
 
-      <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '1rem' }}>
-        <input
-          type="text"
-          placeholder="0x commitment hash"
-          value={commitment}
-          onChange={(event) => setCommitment(event.target.value)}
-        />
-        <button type="submit" disabled={loading}>
-          {loading ? 'Querying…' : 'View'}
-        </button>
-      </form>
-
-      {error && <div className="card">{error}</div>}
-
-      {record.commitment && !error && (
-        <div className="card">
-          <h2>{record.commitment}</h2>
-          <p>
-            Block <strong>{record.block_height}</strong> ·{' '}
-            {new Date(record.timestamp).toLocaleString()}
-          </p>
-          {record.parent_hash && (
-            <p>
-              Parent: <code>{record.parent_hash}</code>
-            </p>
-          )}
-          <p>Entropy: {(record.entropy * 100).toFixed(2)}%</p>
-          <pre>{JSON.stringify(record.metadata, null, 2)}</pre>
+      {data && (
+        <div className="mt-8 border-t border-gray-700 pt-6">
+          <h2 className="text-xl font-semibold mb-2">Mirror Record</h2>
+          <pre className="bg-gray-900 p-4 rounded text-sm">
+            {JSON.stringify(data, null, 2)}
+          </pre>
         </div>
       )}
 
-      <section className="chart">
-        <h3>Recent Lookups</h3>
-        {orderedHistory.length === 0 && <p>No queries yet.</p>}
-        <ul>
-          {orderedHistory.map((item) => (
-            <li key={item.commitment}>
-              <strong>{item.commitment}</strong>
-              <br />
-              Block {item.block_height} · {new Date(item.at).toLocaleTimeString()}
-            </li>
-          ))}
-        </ul>
-      </section>
+      {history.length > 0 && (
+        <div className="mt-10">
+          <h3 className="font-semibold mb-2">Recent Queries</h3>
+          <ul className="space-y-1">
+            {history.map((h, i) => (
+              <li key={i} className="text-sm text-gray-400">
+                {h.commitment?.slice(0, 14)}… block {h.block_height}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {history.length > 1 && (
+        <div className="mt-10">
+          <h3 className="font-semibold mb-2">Block Heights Timeline</h3>
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={history}>
+              <XAxis dataKey="timestamp" hide />
+              <YAxis />
+              <Tooltip />
+              <Line type="monotone" dataKey="block_height" stroke="#82ca9d" />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
     </div>
   );
 }
+
+// Ecosystem Page
+function EcoView() {
+  return (
+    <div className="min-h-screen bg-gray-950 text-gray-100 p-8">
+      <h1 className="text-3xl mb-6 font-bold">Ecosystem Overview</h1>
+      <p>Future analytics or network visualization will go here.</p>
+    </div>
+  );
+}
+
+// App Router
+export default function App() {
+  return (
+    <BrowserRouter>
+      <nav className="p-2 bg-gray-800 flex gap-4">
+        <Link to="/">Viewer</Link>
+        <Link to="/eco">Ecosystem</Link>
+      </nav>
+      <Routes>
+        <Route path="/" element={<Viewer />} />
+        <Route path="/eco" element={<EcoView />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+```

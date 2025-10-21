@@ -16,7 +16,7 @@
       },
       {
         "internalType": "bytes32",
-        "name": "commitment",
+        "name": "contentHash",
         "type": "bytes32"
       },
       {
@@ -26,7 +26,7 @@
       },
       {
         "internalType": "uint64",
-        "name": "timestampMs",
+        "name": "timestamp",
         "type": "uint64"
       }
     ],

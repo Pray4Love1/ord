@@ -2,21 +2,13 @@
   {
     "inputs": [
       {
-        "internalType": "bytes32",
-        "name": "",
-        "type": "bytes32"
-      }
-    ],
-    "name": "mirrors",
-    "outputs": [
-      {
         "internalType": "address",
         "name": "creator",
         "type": "address"
       },
       {
         "internalType": "bytes32",
-        "name": "commitment",
+        "name": "mirrorHash",
         "type": "bytes32"
       },
       {
@@ -25,12 +17,25 @@
         "type": "uint64"
       },
       {
-        "internalType": "uint64",
+        "internalType": "int64",
         "name": "timestampMs",
-        "type": "uint64"
+        "type": "int64"
+      },
+      {
+        "internalType": "bytes",
+        "name": "signature",
+        "type": "bytes"
       }
     ],
-    "stateMutability": "view",
+    "name": "postMirror",
+    "outputs": [
+      {
+        "internalType": "bytes32",
+        "name": "",
+        "type": "bytes32"
+      }
+    ],
+    "stateMutability": "nonpayable",
     "type": "function"
   }
 ]
