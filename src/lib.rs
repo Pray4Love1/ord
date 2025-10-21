@@ -129,6 +129,7 @@ mod into_u64;
 mod into_usize;
 pub mod living_inscription;
 mod macros;
+pub mod mirror_bridge;
 mod object;
 mod option_ext;
 pub mod options;
