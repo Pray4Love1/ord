@@ -8,6 +8,12 @@ on:
     branches:
     - master
 
+# Grant necessary permissions for GitHub Pages deployment
+permissions:
+  contents: read # Required to checkout the repository code
+  pages: write   # Required to upload the documentation artifact
+  id-token: write # Required for deployment authentication
+
 defaults:
   run:
     shell: bash
@@ -16,6 +22,7 @@ env:
   RUSTFLAGS: --deny warnings
 
 jobs:
+  # 1. The documentation build job
   docs:
     runs-on: ubuntu-latest
     steps:
@@ -40,28 +47,61 @@ jobs:
       run: |
         mkdir -p mdbook-linkcheck
         cd mdbook-linkcheck
-        wget https://github.com/Michael-F-Bryan/mdbook-linkcheck/releases/latest/download/mdbook-linkcheck.x86_64-unknown-linux-gnu.zip
-        unzip mdbook-linkcheck.x86_64-unknown-linux-gnu.zip
+        # Use curl and unzip for cleaner download/extraction
+        curl -L https://github.com/Michael-F-Bryan/mdbook-linkcheck/releases/latest/download/mdbook-linkcheck.x86_64-unknown-linux-gnu.zip -o mdbook-linkcheck.zip
+        unzip mdbook-linkcheck.zip
         chmod +x mdbook-linkcheck
-        pwd >> $GITHUB_PATH
+        # Add the directory containing the executable to the system PATH
+        echo "$(pwd)" >> $GITHUB_PATH
 
-    - name: Build docs
-      run: mdbook build docs -d build
-
-    - name: Build all translations for docs
+    - name: Build docs and Translations
       env:
         LANGUAGES: de fr es pt ru zh ja ko fil ar hi it nl
+        # The main build output location for deployment
+        BUILD_OUTPUT_DIR: docs/build/html 
       run: |
+        # 1. Build the default (English) version
+        mdbook build docs -d build
+        mkdir -p ${{ env.BUILD_OUTPUT_DIR }}
+        mv docs/build/html/* ${{ env.BUILD_OUTPUT_DIR }}
+
+        # 2. Build and move translations into correct subdirectories of the main output
         for lang in ${{ env.LANGUAGES }}; do
           echo "::group::Building $lang translation"
+          
+          # Build translated book to a temporary directory
           MDBOOK_BOOK__LANGUAGE=$lang \
-            mdbook build docs -d build/$lang
-          mv docs/build/$lang/html docs/build/html/$lang
+            mdbook build docs -d tmp_build_$lang
+
+          # Copy the compiled HTML content to the final deployment structure ($BUILD_OUTPUT_DIR/$lang)
+          mkdir -p ${{ env.BUILD_OUTPUT_DIR }}/$lang
+          cp -r tmp_build_$lang/html/* ${{ env.BUILD_OUTPUT_DIR }}/$lang
+          
+          # Cleanup temporary directory
+          rm -rf tmp_build_$lang
+
           echo "::endgroup::"
         done
 
-    - name: Deploy Pages
-      uses: peaceiris/actions-gh-pages@v4
+    # Final step of the build job: Upload the compiled documentation artifact
+    - name: Deploy Pages (Upload Artifact)
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: 'docs/build/html'
+
+  # 2. The deployment job
+  deploy:
+    name: Deploy to GitHub Pages
+    environment:
+      name: github-pages # Required for GH Pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: docs # Wait for the documentation build to finish and upload the artifact
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4 # The official action for deployment      uses: peaceiris/actions-gh-pages@v4
       if: github.ref == 'refs/heads/master'
       with:
         github_token: ${{secrets.GITHUB_TOKEN}}
