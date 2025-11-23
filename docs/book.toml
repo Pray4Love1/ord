@@ -18,5 +18,3 @@ additional-css = ["index.css"]
 
 [output.linkcheck]
 
-[preprocessor.gettext]
-after = ["links"]
