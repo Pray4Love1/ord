@@ -3,16 +3,15 @@ name: CI
 on:
   push:
     branches:
-    - master
+      - master
   pull_request:
     branches:
-    - master
+      - master
 
-# Grant necessary permissions for GitHub Pages deployment
 permissions:
-  contents: read # Required to checkout the repository code
-  pages: write   # Required to upload the documentation artifact
-  id-token: write # Required for deployment authentication
+  contents: read
+  pages: write
+  id-token: write
 
 defaults:
   run:
@@ -22,138 +21,126 @@ env:
   RUSTFLAGS: --deny warnings
 
 jobs:
-  # 1. The documentation build job
   docs:
+    name: Build Documentation
     runs-on: ubuntu-latest
+
     steps:
-    - uses: actions/checkout@v5
+      - uses: actions/checkout@v5
 
-    - name: Install Rust Toolchain Components
-      uses: actions-rs/toolchain@v1
-      with:
-        override: true
-        toolchain: stable
+      - name: Install Rust Toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          override: true
+          toolchain: stable
 
-    - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@v2
 
-    - uses: peaceiris/actions-mdbook@v2
-      with:
-        mdbook-version: latest
+      - uses: peaceiris/actions-mdbook@v2
+        with:
+          mdbook-version: latest
 
-    - name: Install mdbook-i18n-helpers
-      run: cargo install mdbook-i18n-helpers
+      - name: Install mdbook-i18n-helpers
+        run: cargo install mdbook-i18n-helpers
 
-    - name: Install mdbook-linkcheck
-      run: |
-        mkdir -p mdbook-linkcheck
-        cd mdbook-linkcheck
-        # Use curl and unzip for cleaner download/extraction
-        curl -L https://github.com/Michael-F-Bryan/mdbook-linkcheck/releases/latest/download/mdbook-linkcheck.x86_64-unknown-linux-gnu.zip -o mdbook-linkcheck.zip
-        unzip mdbook-linkcheck.zip
-        chmod +x mdbook-linkcheck
-        # Add the directory containing the executable to the system PATH
-        echo "$(pwd)" >> $GITHUB_PATH
+      - name: Install mdbook-linkcheck
+        run: |
+          mkdir -p mdbook-linkcheck
+          cd mdbook-linkcheck
+          curl -L https://github.com/Michael-F-Bryan/mdbook-linkcheck/releases/latest/download/mdbook-linkcheck.x86_64-unknown-linux-gnu.zip -o mdbook-linkcheck.zip
+          unzip mdbook-linkcheck.zip
+          chmod +x mdbook-linkcheck
+          echo "$(pwd)" >> $GITHUB_PATH
 
-    - name: Build docs and Translations
-      env:
-        LANGUAGES: de fr es pt ru zh ja ko fil ar hi it nl
-        # The main build output location for deployment
-        BUILD_OUTPUT_DIR: docs/build/html 
-      run: |
-        # 1. Build the default (English) version
-        mdbook build docs -d build
-        mkdir -p ${{ env.BUILD_OUTPUT_DIR }}
-        mv docs/build/html/* ${{ env.BUILD_OUTPUT_DIR }}
+      - name: Build Docs (EN + Translations)
+        env:
+          LANGUAGES: de fr es pt ru zh ja ko fil ar hi it nl
+          BUILD_OUTPUT_DIR: docs/build/html
+        run: |
+          # English build
+          mdbook build docs -d build
+          mkdir -p ${{ env.BUILD_OUTPUT_DIR }}
+          mv docs/build/html/* ${{ env.BUILD_OUTPUT_DIR }}
 
-        # 2. Build and move translations into correct subdirectories of the main output
-        for lang in ${{ env.LANGUAGES }}; do
-          echo "::group::Building $lang translation"
-          
-          # Build translated book to a temporary directory
-          MDBOOK_BOOK__LANGUAGE=$lang \
-            mdbook build docs -d tmp_build_$lang
+          # Translations
+          for lang in ${{ env.LANGUAGES }}; do
+            echo "::group::Building $lang translation"
+            MDBOOK_BOOK__LANGUAGE=$lang mdbook build docs -d tmp_build_$lang
+            mkdir -p ${{ env.BUILD_OUTPUT_DIR }}/$lang
+            cp -r tmp_build_$lang/html/* ${{ env.BUILD_OUTPUT_DIR }}/$lang
+            rm -rf tmp_build_$lang
+            echo "::endgroup::"
+          done
 
-          # Copy the compiled HTML content to the final deployment structure ($BUILD_OUTPUT_DIR/$lang)
-          mkdir -p ${{ env.BUILD_OUTPUT_DIR }}/$lang
-          cp -r tmp_build_$lang/html/* ${{ env.BUILD_OUTPUT_DIR }}/$lang
-          
-          # Cleanup temporary directory
-          rm -rf tmp_build_$lang
+      - name: Upload Docs Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/build/html
 
-          echo "::endgroup::"
-        done
-
-    # Final step of the build job: Upload the compiled documentation artifact
-    - name: Deploy Pages (Upload Artifact)
-      uses: actions/upload-pages-artifact@v3
-      with:
-        path: 'docs/build/html'
-
-  # 2. The deployment job
   deploy:
     name: Deploy to GitHub Pages
-    environment:
-      name: github-pages # Required for GH Pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    needs: docs # Wait for the documentation build to finish and upload the artifact
+    needs: docs
+    environment:
+      name: github-pages
+
+    if: github.ref == 'refs/heads/master'
 
     steps:
-      - name: Deploy to GitHub Pages
+      - name: Deploy
         id: deployment
-        uses: actions/deploy-pages@v4 # The official action for deployment      uses: peaceiris/actions-gh-pages@v4
-      if: github.ref == 'refs/heads/master'
-      with:
-        github_token: ${{secrets.GITHUB_TOKEN}}
-        publish_branch: gh-pages
-        publish_dir: docs/build/html
+        uses: actions/deploy-pages@v4
 
   lint:
+    name: Lint
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v5
+      - uses: actions/checkout@v5
 
-    - name: Install Rust Toolchain Components
-      uses: actions-rs/toolchain@v1
-      with:
-        components: clippy, rustfmt
-        override: true
-        toolchain: stable
+      - name: Install Rust Toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          components: clippy, rustfmt
+          override: true
 
-    - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@v2
 
-    - name: Clippy
-      run: cargo clippy --all --all-targets
+      - name: Clippy
+        run: cargo clippy --all --all-targets
 
-    - name: Format
-      run: cargo fmt --all -- --check
+      - name: Format Check
+        run: cargo fmt --all -- --check
 
-    - name: Check for Forbidden Words
-      run: |
-        sudo apt-get install ripgrep
-        ./bin/forbid
+      - name: Check for Forbidden Words
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ripgrep
+          ./bin/forbid
 
   test:
+    name: Test Suite
     strategy:
+      fail-fast: false
       matrix:
         os:
-        - macos-latest
-        - ubuntu-latest
-        - windows-latest
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
 
-    runs-on: ${{matrix.os}}
+    runs-on: ${{ matrix.os }}
 
     steps:
-    - uses: actions/checkout@v5
+      - uses: actions/checkout@v5
 
-    - name: Install Rust Toolchain Components
-      uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: stable
+      - name: Install Rust Toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
 
-    - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@v2
 
-    - name: Test
-      run: cargo test --all
+      - name: Run Tests
+        run: cargo test --all
