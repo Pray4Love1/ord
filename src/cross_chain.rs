@@ -1,21 +1,120 @@
-use web3::types::{TransactionRequest, U256};
-use web3::transports::Http;
-use web3::Web3;
+use web3::{
+    transports::Http,
+    types::{Address, Bytes, TransactionRequest, U256, H256},
+    Web3,
+};
+use sha2::{Sha256, Digest};
+use serde::{Serialize, Deserialize};
+use hex;
 
-pub async fn relay_to_ethereum(proof_json: &str, eth_rpc: &str, contract: &str, private_key: &str) -> web3::types::H256 {
-    let transport = Http::new(eth_rpc).unwrap();
+/// Domain separator for cross-chain safety
+pub const RELAY_DOMAIN: &str = "BRC20V2::RELAY::ETH";
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RelayEnvelope {
+    pub domain: String,
+    pub chain_id: u64,
+    pub contract: String,
+
+    // proof binding
+    pub proof_hash: String,
+    pub prev_state_hash: String,
+
+    // replay protection
+    pub nonce: u64,
+
+    // metadata
+    pub source: String,
+    pub timestamp: u64,
+
+    // calldata hash (tamper detection)
+    pub calldata_hash: String,
+}
+
+/// Canonical calldata builder (deterministic)
+fn build_calldata(envelope: &RelayEnvelope, proof_json: &str) -> Bytes {
+    let payload = serde_json::json!({
+        "envelope": envelope,
+        "proof": proof_json
+    });
+
+    Bytes(payload.to_string().into_bytes())
+}
+
+/// Hash calldata for audit + verification
+fn hash_calldata(data: &Bytes) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(&data.0);
+    hex::encode(hasher.finalize())
+}
+
+/// Main E2E relay function
+pub async fn relay_to_ethereum(
+    proof_json: &str,
+    proof_hash: &str,
+    prev_state_hash: &str,
+    nonce: u64,
+    eth_rpc: &str,
+    chain_id: u64,
+    contract: &str,
+    private_key_hex: &str,
+) -> H256 {
+
+    let transport = Http::new(eth_rpc).expect("Invalid ETH RPC");
     let web3 = Web3::new(transport);
 
+    let private_key = hex::decode(private_key_hex).expect("Invalid private key hex");
+    let secret = web3::signing::SecretKey::from_slice(&private_key)
+        .expect("Invalid secp256k1 key");
+
+    let from = secret.address();
+    let to: Address = contract.parse().expect("Invalid contract address");
+
+    // ---- build envelope ----
+    let mut envelope = RelayEnvelope {
+        domain: RELAY_DOMAIN.to_string(),
+        chain_id,
+        contract: contract.to_string(),
+
+        proof_hash: proof_hash.to_string(),
+        prev_state_hash: prev_state_hash.to_string(),
+
+        nonce,
+        source: "bitcoin".to_string(),
+        timestamp: chrono::Utc::now().timestamp() as u64,
+
+        calldata_hash: String::new(),
+    };
+
+    // ---- calldata ----
+    let calldata = build_calldata(&envelope, proof_json);
+    envelope.calldata_hash = hash_calldata(&calldata);
+
+    let calldata = build_calldata(&envelope, proof_json);
+
+    // ---- EIP-1559 tx ----
     let tx = TransactionRequest {
-        from: web3::signing::SecretKey::from_slice(&hex::decode(private_key).unwrap()).address(),
-        to: Some(contract.parse().unwrap()),
-        gas: Some(U256::from(300_000)),
-        gas_price: Some(U256::from(20_000_000_000u64)),
+        from,
+        to: Some(to),
+        gas: Some(U256::from(350_000u64)),
+        max_fee_per_gas: Some(U256::from(30_000_000_000u64)),
+        max_priority_fee_per_gas: Some(U256::from(2_000_000_000u64)),
         value: Some(U256::zero()),
-        data: Some(proof_json.as_bytes().into()),
+        data: Some(calldata),
         nonce: None,
         ..Default::default()
     };
-    let tx_hash = web3.eth().send_transaction(tx).await.unwrap();
+
+    // ---- sign + send ----
+    let signed = web3.accounts()
+        .sign_transaction(tx, &secret)
+        .await
+        .expect("TX signing failed");
+
+    let tx_hash = web3.eth()
+        .send_raw_transaction(signed.raw_transaction)
+        .await
+        .expect("TX broadcast failed");
+
     tx_hash
 }
