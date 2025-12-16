@@ -4,7 +4,6 @@ description = "◉ Ordinal wallet and block explorer"
 version = "0.24.2"
 autotests = false
 autobins = false
-
 authors.workspace = true
 edition.workspace = true
 homepage.workspace = true
