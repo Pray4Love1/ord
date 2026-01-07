@@ -1,312 +1,376 @@
-# BRC-20 v2 — Proof-Native, Identity-Aware State Machines on Bitcoin
-
-BRC-20 was deliberately minimal.
-That minimalism is not a weakness — it is the opening.
-
-**BRC-20 v2 does not attempt to recreate smart contracts on Bitcoin.**
-Instead, it treats Bitcoin for what it actually is:
-
-> A globally ordered, time-anchored, immutable state log.
-
-This repository implements a **next-generation BRC-20 architecture** that upgrades fungible inscriptions into **verifiable state machines**, secured by **zero-knowledge proofs**, **identity commitments**, and **cross-chain proof relays** — without modifying Bitcoin.
+# **BRC-20 v2 — A Deterministic, Proof-Oriented Asset Protocol for Bitcoin**
 
 ---
 
-## Design Philosophy
+## Abstract
 
-BRC-20 v2 follows five core principles:
+BRC-20 v2 defines a **state-transition protocol** for fungible and semi-fungible assets on Bitcoin, constructed entirely from **ordinal inscriptions, cryptographic commitments, and verifiable off-chain proofs**.
 
-1. **State over execution**
-2. **Proofs over contracts**
-3. **Time over gas**
-4. **Identity as a first-class constraint**
-5. **Bitcoin as the root of truth**
-
-Everything in this repo exists to serve those principles.
+The protocol does not introduce execution, contracts, or consensus modifications.
+Instead, it formalizes **state**, **validity**, and **time** as first-class primitives, allowing Bitcoin to function as a **root of truth for programmable assets** without violating its minimal design philosophy.
 
 ---
 
-## Architecture Overview (End-to-End)
+## Design Principles
 
-BRC-20 v2 is structured as **explicit layers**, each composed of **microlayers**.
-Each layer can be verified independently, but composes deterministically with the others.
+1. **Determinism over execution**
+2. **Proofs over trust**
+3. **State over events**
+4. **Time over gas**
+5. **Identity as constraint, not metadata**
+6. **Bitcoin as settlement oracle**
+
+---
+
+# **Layered Architecture**
+
+The protocol is decomposed into **macro-layers**, each composed of **strictly defined micro-layers**.
+No layer assumes implicit behavior from another.
+
+---
+
+## **Layer 0 — Bitcoin Substrate Layer**
+
+### Purpose
+
+Provide immutable ordering, time, and economic finality.
+
+### Micro-Layers
+
+**0.1 Transaction Ordering**
+
+* `(block_height, tx_index, ordinal_offset)`
+* Defines total ordering for state transitions
+
+**0.2 Time Semantics**
+
+* Block height as canonical time
+* `nLockTime`, `OP_CSV` usable as external constraints
+
+**0.3 Economic Anchoring**
+
+* All protocol activity consumes blockspace
+* Fees are explicit and unavoidable
+
+**0.4 Immutability Guarantee**
+
+* Once inscribed, protocol history is irreducible
+* No rollbacks, only forward state evolution
+
+---
+
+## **Layer 1 — Inscription Encoding Layer**
+
+### Purpose
+
+Encode protocol data into ordinal inscriptions.
+
+### Micro-Layers
+
+**1.1 Protocol Envelope**
+
+```json
+{
+  "protocol": "brc20v2",
+  "version": 2,
+  "payload": { ... }
+}
+```
+
+**1.2 Canonical Serialization**
+
+* UTF-8
+* Sorted keys
+* No whitespace
+* Deterministic encoding
+
+**1.3 Payload Hash Commitment**
+
+* All inscriptions commit to payload hash
+* Enables light-client verification
+
+**1.4 Backward Compatibility Flag**
+
+* Legacy BRC-20 detectable but isolated
+
+---
+
+## **Layer 2 — State Machine Layer**
+
+### Purpose
+
+Transform inscriptions from *events* into *state transitions*.
+
+### Micro-Layers
+
+**2.1 Explicit State Object**
+
+```text
+State₍ = {
+  balances,
+  metadata,
+  supply,
+  constraints,
+  epoch
+}
+```
+
+**2.2 Transition Function**
 
 ```
-Bitcoin
- └─ Inscription State
-     └─ ZK Proofs
-         └─ Identity / SoulSync
-             └─ Protocol Rules
-                 └─ Relay / Settlement
-                     └─ External Verification (Ethereum, L2s)
+State₍₁ = Apply(State₍, Action, Proof)
 ```
+
+**2.3 Previous State Hash Binding**
+
+* Each transition references `state_hash₍`
+* Prevents reordering or replay
+
+**2.4 Deterministic Failure States**
+
+* Invalid transitions do not mutate state
+* Failure is observable and replayable
 
 ---
 
-## Layer 0 — Bitcoin Base Layer
+## **Layer 3 — Merkle Commitment Layer**
 
-**Purpose:** Global ordering, time, and immutability.
+### Purpose
 
-**What Bitcoin provides (and nothing more):**
+Enable partial verification and light clients.
 
-* Total transaction ordering
-* Block height as time
-* Immutable data availability
-* Fee market & miner incentives
+### Micro-Layers
 
-BRC-20 v2 never attempts to bypass or abstract this layer.
+**3.1 Balance Merkle Tree**
 
----
+* Leaves: `(address, balance)`
+* Root committed per transition
 
-## Layer 1 — Inscription & State Layer
+**3.2 Metadata Merkle Commit**
 
-**Purpose:** Deterministic state machines, not ad-hoc JSON blobs.
+* Token parameters hashed independently
 
-Each BRC-20 v2 operation represents a **state transition**, not just an event.
+**3.3 Inclusion Proofs**
 
-### Canonical State Model
-
-Every inscription commits to:
-
-```
-prev_state_hash → new_state_hash
-```
-
-The inscription payload (see `inscription.rs`) contains:
-
-* `protocol`: fixed identifier (`brc20v2`)
-* `token`: token symbol
-* `action`: mint / transfer / burn / govern
-* `state_hash`: resulting state commitment
-* `merkle_root`: optional balance tree root
-* `proof`: optional ZK proof reference
-
-**Result:**
-
-* Stateless clients
-* Indexer-independent replay
-* Deterministic verification
+* Wallets verify balances without full state
 
 ---
 
-## Layer 2 — ZK Proof Layer
+## **Layer 4 — Zero-Knowledge Proof Layer**
 
-**Purpose:** Programmability without smart contracts.
+### Purpose
 
-Bitcoin does not execute logic — **users prove that logic was executed correctly**.
+Enable programmable constraints without on-chain execution.
 
-### What ZK Proofs Enforce
+### Micro-Layers
 
-ZK proofs can attest to:
+**4.1 Proof Scope Definition**
 
-* Balance correctness
-* Supply caps
-* Transfer constraints
-* Vesting schedules
-* Time locks
-* Governance rules
+Proof attests to:
+
+* Balance sufficiency
+* Supply invariants
+* Constraint satisfaction
+
+**4.2 Constraint Encoding**
+
+* Max transfer
+* Vesting
+* Epoch rules
 * Identity requirements
 
-Only the **proof commitment** is inscribed.
-Verification happens off-chain, deterministically.
+**4.3 Proof Hash Inscription**
 
-### Implementation
+* Only proof commitment is inscribed
+* Full proof verified off-chain
 
-* `zk.rs` / `zk_proof.rs`
-* Pluggable circuits
-* Proof hashes committed into inscription state
+**4.4 Batch & Aggregate Proofs**
 
----
-
-## Layer 3 — Identity & SoulSync Layer
-
-**Purpose:** Make identity a constraint, not an afterthought.
-
-Not all tokens should be freely transferable.
-
-### Identity Commitments
-
-The `identity.rs` microlayer provides:
-
-* Deterministic identity commitments
-* Hash-based verification
-* No on-chain PII
-* No central registry
-
-Identity proofs can gate:
-
-* Who can mint
-* Who can receive
-* Who can vote
-* Who can relay state
-
-### Soulbound Semantics
-
-Tokens may be:
-
-* Non-transferable
-* Revocable
-* Expirable
-* Role-bound
-
-This enables:
-
-* Reputation systems
-* DAO credentials
-* Access control
-* Proof-of-personhood
+* Multiple transitions validated atomically
 
 ---
 
-## Layer 4 — Protocol Rules & Errors
+## **Layer 5 — Identity & SoulSync Layer**
 
-**Purpose:** Deterministic enforcement of token law.
+### Purpose
 
-All rule failures are explicit and enumerable (`errors.rs`):
+Introduce identity as a cryptographic constraint.
 
-* Identity failure
-* Insufficient balance
-* Soulbound restriction
-* Vesting lock
-* Transfer caps
-* Invalid proofs
-* Relay failures
+### Micro-Layers
 
-There are **no silent failures**.
+**5.1 Identity Commitment**
 
-This layer ensures:
+* Subject → commitment hash
+* No PII on-chain
 
-* Clear replay semantics
-* Auditable failure reasons
-* Identical behavior across indexers
+**5.2 Verification Function**
 
----
+* Deterministic signature / commitment match
 
-## Layer 5 — Relay & Settlement Layer
+**5.3 Soulbound Constraint**
 
-**Purpose:** Extend Bitcoin state to other execution environments without wrapping assets.
+* `transfer = false`
+* Enforced by proof layer
 
-### Proof-Carrying Relays
+**5.4 Revocation & Expiry**
 
-Instead of custodial bridges:
-
-* Bitcoin inscriptions commit state
-* ZK proofs attest correctness
-* External chains verify proofs
-
-The `relay/ethereum.rs` microlayer demonstrates:
-
-* Stateless Ethereum verification
-* Proof submission as calldata
-* No asset custody
-* No mint/burn mirrors
-
-Bitcoin remains the **settlement oracle**.
+* Identity validity bounded by epoch / block height
 
 ---
 
-## Layer 6 — Indexer Independence
+## **Layer 6 — Temporal Logic Layer**
 
-**Purpose:** Eliminate indexer centralization risk.
+### Purpose
 
-BRC-20 v2 enforces:
+Exploit Bitcoin’s strongest primitive: time.
 
-* Canonical parsing rules
-* Deterministic serialization
-* Replayable state transitions
-* Optional Merkle snapshots
+### Micro-Layers
 
-Anyone can:
+**6.1 Block-Height Locks**
 
-* Recompute full state from genesis
-* Verify balances independently
-* Reject invalid histories
+* Vesting schedules
+* Delayed minting
 
-There are no “soft rules”.
+**6.2 Epoch Windows**
 
----
+* Governance rounds
+* Emission periods
 
-## Layer 7 — Application Layer
+**6.3 Time-Bound Proof Validity**
 
-**Purpose:** Enable real systems, not demos.
-
-Built on top of BRC-20 v2:
-
-* Programmable wallets
-* Streaming payments
-* Vesting payroll
-* Reputation-based DAOs
-* Identity-gated economies
-* Cross-chain liquidity proofs
-
-All without changing Bitcoin.
+* Proofs expire automatically
 
 ---
 
-## Economic Alignment
+## **Layer 7 — Governance Layer**
 
-BRC-20 v2 is designed to **pay Bitcoin**, not extract from it.
+### Purpose
 
-Possible mechanisms:
+Enable protocol evolution without contracts.
 
-* Mandatory inscription fees
-* Proof verification costs
-* Miner-aligned incentives
-* Activity-driven blockspace demand
+### Micro-Layers
 
-This ensures BRC-20 v2 strengthens Bitcoin’s security model post-halving.
+**7.1 Proposal Inscriptions**
 
----
+* Canonical proposal hash
 
-## What This Repository Is
+**7.2 Voting as State Transition**
 
-This repo is:
+* Votes modify governance state
 
-* A **protocol implementation**
-* A **reference architecture**
-* A **proof-native design**
-* A **migration path beyond primitive BRC-20**
+**7.3 Threshold Rules**
 
-It is **not**:
+* Quorum & majority encoded in constraints
 
-* An ERC-20 clone
-* A smart contract framework
-* A custodial bridge
-* A speculative wrapper
+**7.4 Finality Epochs**
+
+* Governance results apply only after epoch close
 
 ---
 
-## Migration Path
+## **Layer 8 — Interoperability Layer**
 
-1. Existing BRC-20 tokens derive initial state hash
-2. State machine rules are declared
-3. Proof-enabled transfers begin
-4. Identity & soulbound features opt-in
-5. Cross-chain verification added incrementally
+### Purpose
 
-Backward compatibility is preserved where possible.
+Allow Bitcoin-anchored state to be consumed elsewhere.
 
----
+### Micro-Layers
 
-## Summary
+**8.1 Proof-Carrying Messages**
 
-BRC-20 v2 reframes Bitcoin tokens as:
+* `(state_root, proof)` exported
 
-* **State machines**
-* **Proof-verified**
-* **Time-aware**
-* **Identity-constrained**
-* **Cross-chain verifiable**
+**8.2 External Verification**
 
-Bitcoin becomes not just money — but the **root of global digital truth**.
+* Ethereum, Solana, Cosmos verify proof validity
+
+**8.3 No Asset Wrapping**
+
+* No custody
+* No lock-and-mint
 
 ---
 
-If you want, next we can:
+## **Layer 9 — Economic Alignment Layer**
 
-* Formalize this into a **BRC-20 v2 spec**
-* Add **canonical JSON / CBOR schemas**
-* Produce **protocol diagrams**
-* Or wire the full **E2E transfer flow** across all layers
+### Purpose
 
-Just say which file is next.
+Ensure protocol strengthens Bitcoin.
+
+### Micro-Layers
+
+**9.1 Mandatory Fee Consumption**
+
+* Every transition pays miners
+
+**9.2 Fee-Weighted Activity**
+
+* High-value operations cost more
+
+**9.3 Post-Subsidy Security Contribution**
+
+* Protocol remains viable after halvings
+
+---
+
+## **Layer 10 — Application Layer**
+
+### Purpose
+
+Expose protocol to users.
+
+### Micro-Layers
+
+**10.1 Stateless Wallets**
+
+* Verify via proofs
+* No trusted indexer required
+
+**10.2 Programmable Transfers**
+
+* Vesting
+* Streaming
+* Conditional delivery
+
+**10.3 Reputation & Access Tokens**
+
+* Soulbound credentials
+* DAO participation
+
+---
+
+## **Problem → Solution Mapping**
+
+| Problem            | Micro-Layer Solution                   |
+| ------------------ | -------------------------------------- |
+| Indexer trust      | Canonical serialization + state hashes |
+| No rules           | ZK constraint proofs                   |
+| No time            | Block-height locks                     |
+| No identity        | Commitment-based identity layer        |
+| Fragile bridges    | Proof-carrying messages                |
+| Miner misalignment | Mandatory fee layer                    |
+
+---
+
+## Final Assertion
+
+BRC-20 v2 does not attempt to make Bitcoin expressive.
+
+It makes **correctness provable**.
+
+Bitcoin becomes:
+
+> A globally verifiable state court
+> where proofs, not execution, determine truth.
+
+---
+
+If you want, the next artifacts to complete the stack would be:
+
+* **Formal state transition pseudocode**
+* **ZK circuit definitions**
+* **Canonical CBOR schemas**
+* **Security and adversarial analysis**
+* **Reference Rust + ord implementation**
+
+State which one you want next, and we continue.
