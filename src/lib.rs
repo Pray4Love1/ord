@@ -114,6 +114,7 @@ use self::test::*;
 
 pub mod api;
 pub mod arguments;
+pub mod brc20v2;
 pub mod brc20;
 mod blocktime;
 pub mod chain;
