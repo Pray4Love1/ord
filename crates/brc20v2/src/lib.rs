@@ -1,100 +1,122 @@
+use std::collections::HashMap;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::collections::HashMap;
 
 pub mod cross_chain;
 pub mod zk_proof;
 
 pub use crate::cross_chain::{CrossChainRelay, RelayEnvelope, relay_to_ethereum};
-pub use crate::zk_proof::{ZkProof, ZkProofRequest, ZkProofEnvelope, generate_zk_proof, verify_zk_proof};
+pub use crate::zk_proof::{ZkProofEnvelope, generate_zk_proof, verify_zk_proof};
+
+// Protocol Constants
+pub const PROTOCOL: &str = "brc20v2";
+pub const STATE_DOMAIN: &str = "BRC20V2::STATE";
+
+// ---- Metadata & Rules ----
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TokenRules {
+    pub max_per_tx: Option<u64>,
+    pub soulbound: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VestingSchedule {
+    pub unlock_block: u64,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Metadata {
     pub name: String,
     pub symbol: String,
     pub decimals: u8,
-    pub soulbound: bool,
-    pub transfer_rules: HashMap<String, u64>,
-    pub vesting: HashMap<String, u64>,
+    pub rules: TokenRules,
 }
 
+// ---- State ----
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BRC20v2 {
     pub token_id: String,
     pub balances: HashMap<String, u64>,
+    pub vesting: HashMap<String, VestingSchedule>,
     pub metadata: Metadata,
-    pub prev_state_hash: String,
     pub merkle_root: String,
+    pub prev_state_hash: String,
+    pub nonce: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Inscription {
-    pub inscription_type: String,
-    pub token_id: String,
+    pub protocol: String,
     pub action: String,
+    pub token_id: String,
     pub state_hash: String,
     pub merkle_root: String,
+    pub proof: Option<ZkProofEnvelope>,
     pub metadata: Metadata,
-    pub proof: Option<String>,
-    pub timestamp: i64,
+    pub nonce: u64,
+    pub timestamp: u64,
 }
 
 impl BRC20v2 {
-    pub fn new(token_id: &str) -> Self {
+    pub fn new(token_id: &str, metadata: Metadata) -> Self {
         Self {
             token_id: token_id.to_string(),
             balances: HashMap::new(),
-            metadata: Metadata {
-                name: String::new(),
-                symbol: String::new(),
-                decimals: 0,
-                soulbound: false,
-                transfer_rules: HashMap::new(),
-                vesting: HashMap::new(),
-            },
-            prev_state_hash: "0".repeat(64),
+            vesting: HashMap::new(),
+            metadata,
             merkle_root: String::new(),
+            prev_state_hash: "0".repeat(64),
+            nonce: 0,
         }
     }
 
-    pub fn set_metadata(&mut self, metadata: Metadata) {
-        self.metadata = metadata;
-    }
-
-    pub fn mint(&mut self, addr: &str, amount: u64) {
-        *self.balances.entry(addr.to_string()).or_insert(0) += amount;
+    pub fn mint(&mut self, to: &str, amount: u64) {
+        *self.balances.entry(to.to_string()).or_insert(0) += amount;
         self.update_state();
     }
 
+    pub fn add_vesting(&mut self, addr: &str, unlock_block: u64) {
+        self.vesting.insert(addr.to_string(), VestingSchedule { unlock_block });
+    }
+
+    #[allow(clippy::too_many_arguments)]
     pub fn transfer(
         &mut self,
         from: &str,
         to: &str,
         amount: u64,
-        current_block: u64,
+        block_height: u64,
+        epoch: u64,
+        chain_id: &str,
         identity_verified: bool,
-    ) -> String {
-        if self.metadata.soulbound {
-            panic!("Soulbound token cannot be transferred");
+        identity_commitment: Option<&str>,
+    ) -> ZkProofEnvelope {
+        if self.metadata.rules.soulbound {
+            panic!("Token is soulbound");
         }
-        if let Some(&unlock_block) = self.metadata.vesting.get(from) {
-            if current_block < unlock_block {
-                panic!("Tokens are locked until block {}", unlock_block);
+
+        if let Some(v) = self.vesting.get(from) {
+            if block_height < v.unlock_block {
+                panic!("Tokens locked until block {}", v.unlock_block);
             }
         }
-        if let Some(&max_per_tx) = self.metadata.transfer_rules.get("max_per_tx") {
-            if amount > max_per_tx {
-                panic!("Exceeds max per transaction");
+
+        if let Some(max) = self.metadata.rules.max_per_tx {
+            if amount > max {
+                panic!("Transfer exceeds max_per_tx");
             }
         }
-        let from_balance = self.balances.get_mut(from).expect("Sender balance not found");
-        if *from_balance < amount {
+
+        let sender = self.balances.get_mut(from).expect("Sender not found");
+        if *sender < amount {
             panic!("Insufficient balance");
         }
 
-        *from_balance -= amount;
+        *sender -= amount;
         *self.balances.entry(to.to_string()).or_insert(0) += amount;
+
+        self.nonce += 1;
 
         let proof = generate_zk_proof(
             from,
@@ -102,81 +124,86 @@ impl BRC20v2 {
             amount,
             &self.prev_state_hash,
             identity_verified,
-            None,
-            0,
-            current_block,
-            0,
-            Some(1_000_000_000),
-            "bitcoin-mainnet",
-        )
-        .proof_hash;
+            identity_commitment,
+            self.nonce,
+            block_height,
+            epoch,
+            self.metadata.rules.max_per_tx,
+            chain_id,
+        );
 
         self.update_state();
         proof
     }
 
     pub fn update_state(&mut self) {
-        let nodes: Vec<String> = self
-            .balances
-            .iter()
-            .map(|(key, value)| format!("{}:{}", key, value))
-            .map(|entry| {
-                let mut hasher = Sha256::new();
-                hasher.update(entry.as_bytes());
-                hex::encode(hasher.finalize())
-            })
-            .collect();
+        self.merkle_root = self.compute_merkle_root();
 
-        self.merkle_root = merkle_root(nodes);
-
-        let state = serde_json::json!({
+        let canonical = serde_json::json!({
+            "domain": STATE_DOMAIN,
             "token_id": self.token_id,
             "balances": self.balances,
             "metadata": self.metadata,
             "merkle_root": self.merkle_root,
+            "nonce": self.nonce,
             "timestamp": Utc::now().timestamp(),
         });
 
         let mut hasher = Sha256::new();
-        hasher.update(state.to_string().as_bytes());
+        hasher.update(canonical.to_string().as_bytes());
         self.prev_state_hash = hex::encode(hasher.finalize());
     }
 
-    pub fn generate_inscription(&self, action: &str, proof: Option<String>) -> Inscription {
+    fn compute_merkle_root(&self) -> String {
+        let mut leaves: Vec<String> = self
+            .balances
+            .iter()
+            .map(|(a, b)| format!("{}:{}", a, b))
+            .collect();
+        leaves.sort();
+
+        let mut nodes: Vec<String> = leaves
+            .into_iter()
+            .map(|l| {
+                let mut h = Sha256::new();
+                h.update(l.as_bytes());
+                hex::encode(h.finalize())
+            })
+            .collect();
+
+        while nodes.len() > 1 {
+            let mut next = Vec::new();
+            for pair in nodes.chunks(2) {
+                let combined = if pair.len() == 2 {
+                    format!("{}{}", pair[0], pair[1])
+                } else {
+                    pair[0].clone()
+                };
+                let mut h = Sha256::new();
+                h.update(combined.as_bytes());
+                next.push(hex::encode(h.finalize()));
+            }
+            nodes = next;
+        }
+
+        nodes.first().cloned().unwrap_or_default()
+    }
+
+    pub fn generate_inscription(
+        &self,
+        action: &str,
+        proof: Option<ZkProofEnvelope>,
+    ) -> Inscription {
         Inscription {
-            inscription_type: "brc20v2".to_string(),
-            token_id: self.token_id.clone(),
+            protocol: PROTOCOL.to_string(),
             action: action.to_string(),
+            token_id: self.token_id.clone(),
             state_hash: self.prev_state_hash.clone(),
             merkle_root: self.merkle_root.clone(),
-            metadata: self.metadata.clone(),
             proof,
-            timestamp: Utc::now().timestamp(),
+            metadata: self.metadata.clone(),
+            nonce: self.nonce,
+            timestamp: Utc::now().timestamp() as u64,
         }
     }
-}
-
-fn merkle_root(mut nodes: Vec<String>) -> String {
-    if nodes.is_empty() {
-        return String::new();
-    }
-
-    while nodes.len() > 1 {
-        let mut temp = Vec::with_capacity((nodes.len() + 1) / 2);
-        let mut i = 0;
-        while i < nodes.len() {
-            let combined = if i + 1 < nodes.len() {
-                format!("{}{}", nodes[i], nodes[i + 1])
-            } else {
-                nodes[i].clone()
-            };
-            let mut hasher = Sha256::new();
-            hasher.update(combined.as_bytes());
-            temp.push(hex::encode(hasher.finalize()));
-            i += 2;
-        }
-        nodes = temp;
-    }
-
-    nodes[0].clone()
 }

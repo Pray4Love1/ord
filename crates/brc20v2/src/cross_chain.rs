@@ -11,7 +11,7 @@ use web3::{
 /// Domain separator for Ethereum relay scope
 pub const RELAY_DOMAIN: &str = "BRC20V2::RELAY::ETH";
 
-/// Relay envelope for calldata + proof relay
+/// Full zkProof envelope for relay integrity
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RelayEnvelope {
     pub domain: String,
@@ -25,7 +25,7 @@ pub struct RelayEnvelope {
     pub calldata_hash: String,
 }
 
-/// Manual calldata serializer (for sending to EVM contract)
+/// Manual calldata serializer (to relay zk proof to EVM)
 fn build_calldata(envelope: &RelayEnvelope, proof_json: &str) -> Bytes {
     let payload = serde_json::json!({
         "envelope": envelope,
@@ -35,14 +35,14 @@ fn build_calldata(envelope: &RelayEnvelope, proof_json: &str) -> Bytes {
     Bytes(payload.to_string().into_bytes())
 }
 
-/// Hash the full calldata payload for integrity
+/// Hash the full calldata payload
 fn hash_calldata(data: &Bytes) -> String {
     let mut hasher = Sha256::new();
     hasher.update(&data.0);
     hex::encode(hasher.finalize())
 }
 
-/// Full Ethereum relay for advanced proof envelope
+/// Advanced Ethereum relay handler with zk envelope
 pub async fn relay_to_ethereum(
     proof_json: &str,
     proof_hash: &str,
@@ -79,7 +79,7 @@ pub async fn relay_to_ethereum(
     let calldata = build_calldata(&envelope, proof_json);
     envelope.calldata_hash = hash_calldata(&calldata);
 
-    let calldata = build_calldata(&envelope, proof_json);
+    let final_data = build_calldata(&envelope, proof_json);
 
     let tx = TransactionRequest {
         from,
@@ -88,7 +88,7 @@ pub async fn relay_to_ethereum(
         max_fee_per_gas: Some(U256::from(30_000_000_000u64)),
         max_priority_fee_per_gas: Some(U256::from(2_000_000_000u64)),
         value: Some(U256::zero()),
-        data: Some(calldata),
+        data: Some(final_data),
         nonce: None,
         ..Default::default()
     };
@@ -108,7 +108,7 @@ pub async fn relay_to_ethereum(
     Ok(tx_hash)
 }
 
-/// Simpler structured relay for basic use/testing
+/// Simpler CrossChainRelay (non-zk mode)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CrossChainRelay {
     pub ethereum_rpc: String,

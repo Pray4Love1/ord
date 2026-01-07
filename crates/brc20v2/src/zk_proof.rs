@@ -1,11 +1,12 @@
 use sha2::{Digest, Sha256};
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
+use chrono::Utc;
 
-/// Domain separator prevents cross-protocol replay.
+/// Domain separator to avoid cross-protocol replay
 pub const ZK_DOMAIN: &str = "BRC20V2::ZK::TRANSFER";
 
-/// Simple ZK-style request/response format (can be extended with real circuits).
+/// Minimal request structure for mock or future zk-SNARK integration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ZkProofRequest {
     pub statement: String,
@@ -27,7 +28,7 @@ impl ZkProof {
     }
 }
 
-/// Full envelope for deterministic, verifiable BRC20v2 proof relay
+/// Final envelope for cross-chain BRC20v2 verifiable proof relays
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ZkProofEnvelope {
     pub domain: String,
@@ -36,28 +37,29 @@ pub struct ZkProofEnvelope {
     pub amount: u64,
     pub prev_state_hash: String,
 
-    // Identity / anti-sybil layer
-    pub identity_commitment: Option<String>,
+    // Identity/Anti-sybil Layer
     pub identity_verified: bool,
+    pub identity_commitment: Option<String>,
 
-    // Replay protection
+    // Replay Protection
     pub nonce: u64,
 
-    // Time binding
+    // Time Binding
     pub block_height: u64,
     pub epoch: u64,
+    pub timestamp: u64,
 
-    // Policy rule
+    // Policy
     pub max_per_tx: Option<u64>,
 
     // Cross-chain integrity
     pub chain_id: String,
 
-    // Final hash (proof commitment)
+    // Final hash for signature/validation
     pub proof_hash: String,
 }
 
-/// Main proof generator for state-layer BRC20v2 transfer
+#[allow(clippy::too_many_arguments)]
 pub fn generate_zk_proof(
     from: &str,
     to: &str,
@@ -81,9 +83,11 @@ pub fn generate_zk_proof(
         }
     }
 
-    // Canonical serialization (DO NOT change field order!)
+    let timestamp = Utc::now().timestamp() as u64;
+
+    // Canonical, deterministic proof payload
     let canonical = format!(
-        "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}",
+        "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}",
         ZK_DOMAIN,
         from,
         to,
@@ -93,7 +97,8 @@ pub fn generate_zk_proof(
         nonce,
         block_height,
         epoch,
-        chain_id
+        chain_id,
+        timestamp
     );
 
     let mut hasher = Sha256::new();
@@ -106,21 +111,22 @@ pub fn generate_zk_proof(
         to: to.to_string(),
         amount,
         prev_state_hash: prev_state_hash.to_string(),
-        identity_commitment: identity_commitment.map(|s| s.to_string()),
         identity_verified,
+        identity_commitment: identity_commitment.map(str::to_string),
         nonce,
         block_height,
         epoch,
+        timestamp,
         max_per_tx,
         chain_id: chain_id.to_string(),
         proof_hash,
     }
 }
 
-/// Lightweight verifier — can be used by indexers or bridges
+/// Verify zk-proof envelope without external signature or SNARK
 pub fn verify_zk_proof(proof: &ZkProofEnvelope) -> bool {
     let canonical = format!(
-        "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}",
+        "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}",
         proof.domain,
         proof.from,
         proof.to,
@@ -130,7 +136,8 @@ pub fn verify_zk_proof(proof: &ZkProofEnvelope) -> bool {
         proof.nonce,
         proof.block_height,
         proof.epoch,
-        proof.chain_id
+        proof.chain_id,
+        proof.timestamp
     );
 
     let mut hasher = Sha256::new();
