@@ -16,6 +16,7 @@ pub struct ZkProof {
   pub identity_verified: bool,
   pub proof_hash: String,
   pub version: String,
+  pub payload: serde_json::Value, // Optional payload for inscriptions
 }
 
 impl ZkProof {
@@ -42,6 +43,7 @@ impl ZkProof {
       identity_verified,
       proof_hash,
       version: "v2".to_string(),
+      payload: serde_json::json!({}),
     })
   }
 
@@ -97,6 +99,4 @@ mod tests {
   fn test_zkproof_invalid_hash() {
     let mut proof = ZkProof::new("a", "b", 10, "prevhash", true).unwrap();
     proof.proof_hash = "wronghash".to_string();
-    assert!(matches!(proof.verify(), Err(Brc20Error::InvalidProof)));
-  }
-}
+    assert!(matches!(proof.verify(), Err(Brc20Error::InvalidPr
