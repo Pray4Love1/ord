@@ -114,13 +114,18 @@ use self::test::*;
 
 pub mod api;
 pub mod arguments;
+pub mod brc20v2;
+pub mod brc20;
 mod blocktime;
 pub mod chain;
 pub mod decimal;
 mod deserialize_from_str;
+pub mod errors;
 mod error;
+pub mod errors;
 mod fee_rate;
 mod fund_raw_transaction;
+pub mod identity;
 pub mod index;
 mod inscriptions;
 mod into_u64;
@@ -140,7 +145,9 @@ mod signer;
 pub mod subcommand;
 mod tally;
 pub mod templates;
+pub mod zk;
 pub mod wallet;
+pub mod zk;
 
 type Result<T = (), E = Error> = std::result::Result<T, E>;
 type SnafuResult<T = (), E = SnafuError> = std::result::Result<T, E>;
