@@ -106,7 +106,7 @@ Transform inscriptions from *events* into *state transitions*.
 **2.1 Explicit State Object**
 
 ```text
-Stateₙ = {
+State₍ = {
   balances,
   metadata,
   supply,
@@ -118,12 +118,12 @@ Stateₙ = {
 **2.2 Transition Function**
 
 ```
-Stateₙ₊₁ = Apply(Stateₙ, Action, Proof)
+State₍₁ = Apply(State₍, Action, Proof)
 ```
 
 **2.3 Previous State Hash Binding**
 
-* Each transition references `state_hashₙ`
+* Each transition references `state_hash₍`
 * Prevents reordering or replay
 
 **2.4 Deterministic Failure States**
