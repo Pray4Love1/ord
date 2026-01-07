@@ -240,7 +240,7 @@ def verify_state(args: argparse.Namespace) -> None:
             "verification failed: "
             + ", ".join(
                 part
-                for part, ok in ("merkle_root", merkle_ok), ("state_hash", hash_ok)
+                for part, ok in [("merkle_root", merkle_ok), ("state_hash", hash_ok)]
                 if not ok
             )
         )

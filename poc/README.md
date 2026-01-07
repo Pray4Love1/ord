@@ -31,8 +31,6 @@ python3 poc/brc20_poc.py export --output poc_state.json
 python3 poc/brc20_poc.py verify
 ```
 
-## Soulbound behavior
-
 To create a soulbound token, mint with `--soulbound`. Transfers will be rejected.
 
 ```bash
@@ -45,8 +43,6 @@ python3 poc/brc20_poc.py mint \
   --amount 1 \
   --soulbound
 ```
-
-## Vesting schedules
 
 Attach a vesting schedule during mint. Heights are arbitrary numbers that can map to block heights in an indexer.
 
@@ -65,8 +61,42 @@ python3 poc/brc20_poc.py mint \
 
 Transfers from a vested address require enough unlocked balance at the provided `--height`.
 
-## Extension points
+Extension points:
 
-- **ZK batching**: swap out the hash functions and merkle builder for circuit-friendly equivalents.
-- **Identity hooks**: enrich `ledger` entries with DID or attestation references.
-- **Indexer verification**: replay `ledger` entries to reconstruct deterministic state.
+* ZK batching: swap out the hash functions and merkle builder for circuit-friendly equivalents.
+* Identity hooks: enrich `ledger` entries with DID or attestation references.
+* Indexer verification: replay `ledger` entries to reconstruct deterministic state.
+
+```bash
+python3 brc20_poc.py init \
+  --symbol ORD2 \
+  --max-supply 21000000 \
+  --decimals 0 \
+  --state state.json
+```
+
+```bash
+python3 brc20_poc.py mint \
+  --state state.json \
+  --to bc1qexampleaddress \
+  --amount 1000
+```
+
+```bash
+python3 brc20_poc.py transfer \
+  --state state.json \
+  --sender bc1qexampleaddress \
+  --recipient bc1qrecipient \
+  --amount 250
+```
+
+```bash
+python3 brc20_poc.py export --state state.json --out export.json
+```
+
+```bash
+python3 brc20_poc.py verify --state state.json
+```
+
+* `state_hash` provides deterministic state hash chaining via `prev_state_hash`.
+* `merkle_root` commits to balance state

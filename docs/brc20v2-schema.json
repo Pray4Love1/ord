@@ -1,5 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ordinals.com/brc20v2/state.schema.json",
   "title": "BRC-20 v2 Canonical Token State",
   "type": "object",
   "required": [
@@ -10,47 +11,43 @@
     "decimals",
     "max_supply",
     "minted_supply",
+    "balances",
     "rules",
     "prev_state_hash",
     "state_hash",
-    "merkle_root",
-    "balances",
-    "ledger"
+    "merkle_root"
   ],
   "properties": {
-    "version": { "type": "string" },
+    "version": {
+      "type": "string",
+      "description": "Protocol version string, e.g. '2'."
+    },
     "token_id": { "type": "string" },
     "name": { "type": "string" },
     "symbol": { "type": "string" },
-    "decimals": { "type": "integer", "minimum": 0 },
-    "max_supply": { "type": "integer", "minimum": 0 },
-    "minted_supply": { "type": "integer", "minimum": 0 },
-    "rules": {
-      "type": "object",
-      "required": ["soulbound", "transferable", "vesting"],
-      "properties": {
-        "soulbound": { "type": "boolean" },
-        "transferable": { "type": "boolean" },
-        "vesting": {
-          "type": "object",
-          "required": ["enabled"],
-          "properties": {
-            "enabled": { "type": "boolean" }
-          },
-          "additionalProperties": true
-        }
-      },
-      "additionalProperties": false
+    "decimals": {
+      "type": "integer",
+      "minimum": 0
     },
-    "prev_state_hash": { "type": "string" },
-    "state_hash": { "type": "string" },
-    "merkle_root": { "type": "string" },
+    "max_supply": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "minted_supply": {
+      "type": "integer",
+      "minimum": 0
+    },
     "balances": {
       "type": "object",
-      "additionalProperties": { "type": "integer", "minimum": 0 }
+      "description": "Map of address → integer balance",
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
+      }
     },
     "vesting": {
       "type": "object",
+      "description": "Per-address vesting rules",
       "additionalProperties": {
         "type": "object",
         "required": ["total", "start_height", "cliff_height", "duration"],
@@ -64,18 +61,62 @@
         "additionalProperties": false
       }
     },
+    "rules": {
+      "type": "object",
+      "required": ["soulbound", "transferable", "vesting"],
+      "properties": {
+        "soulbound": { "type": "boolean", "default": false },
+        "transferable": { "type": "boolean", "default": true },
+        "vesting": {
+          "type": "object",
+          "required": ["enabled"],
+          "properties": {
+            "enabled": { "type": "boolean" }
+          },
+          "additionalProperties": true
+        },
+        "max_per_tx": {
+          "type": ["string", "null"],
+          "description": "Optional max per tx limit"
+        }
+      },
+      "additionalProperties": false
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Optional arbitrary token metadata",
+      "additionalProperties": {
+        "type": ["string", "number", "boolean", "null"]
+      }
+    },
     "ledger": {
       "type": "array",
+      "description": "On-chain events and token actions",
       "items": {
         "type": "object",
         "required": ["op", "timestamp", "tx"],
         "properties": {
-          "op": { "type": "string", "enum": ["mint", "transfer"] },
+          "op": {
+            "type": "string",
+            "enum": ["mint", "transfer"]
+          },
           "timestamp": { "type": "string" },
           "tx": { "type": "object" }
         },
         "additionalProperties": false
       }
+    },
+    "prev_state_hash": {
+      "type": "string",
+      "description": "Hash pointer to the previous state object"
+    },
+    "state_hash": {
+      "type": "string",
+      "description": "Deterministic hash of the current state"
+    },
+    "merkle_root": {
+      "type": "string",
+      "description": "Merkle root commitment of balances for ZK proofs"
     }
   },
   "additionalProperties": false

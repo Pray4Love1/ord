@@ -1,16 +1,38 @@
-# BRC-20 v2 Architecture (PoC)
+Layer 8 ─ Application & UX
+         ▸ Wallets, marketplaces, DEXs, analytics, mobile/web clients
+         ▸ End-user flows: mint, transfer, vest, verify
 
-This document is the human-readable, reviewer-friendly mental model for the BRC-20 v2 proof-of-concept.
+Layer 7 ─ Interoperability & Verifiers
+         ▸ Indexers, bridges, relayers
+         ▸ On/off-chain proof verification (ZK/identity/state)
+         ▸ Fee markets and liquidity routing
 
-```
-Layer 8 ─ Applications & UX
-Layer 7 ─ Indexers & Verification
 Layer 6 ─ Execution & State Transitions
-Layer 5 ─ Token Logic & Policy
-Layer 4 ─ Identity & Rules (Soulbound/Vesting)
-Layer 3 ─ Commitments & Proofs (Merkle/ZK)
-Layer 2 ─ Inscription Payloads (CBOR/JSON)
-Layer 1 ─ Bitcoin Base Layer (TXs + Inscriptions)
-```
+         ▸ Stateless → stateful updates
+         ▸ Rules for valid mints/transfers/burns
+         ▸ Replay protection, nonces, rate limits
 
-Each layer is designed to be independently reviewable, while still composing into a full system that can be built and validated today.
+Layer 5 ─ Token Logic & Policy
+         ▸ Token definitions: max_supply, mintable, royalties, cap
+         ▸ Per-token policies (e.g., soulbound, whitelist-only)
+         ▸ Upgrade hooks, programmable token behavior
+
+Layer 4 ─ Identity & Attestation
+         ▸ DID, KYC, Sybil resistance
+         ▸ Proof-of-personhood (e.g., World ID, Gitcoin Passport)
+         ▸ ZK-backed attestations, vesting schedules
+
+Layer 3 ─ Commitment & ZK Proof Layer
+         ▸ Merkle roots, state hashes, proof generation
+         ▸ BRC20v2::ZK::TRANSFER domain separation
+         ▸ Selective disclosure, shielded logic (optional)
+
+Layer 2 ─ Inscription Payloads
+         ▸ CBOR or JSON-based operation definitions
+         ▸ Canonical format for indexing and relay
+         ▸ Fully auditable, no execution ambiguity
+
+Layer 1 ─ Bitcoin Base Layer
+         ▸ Finality, timestamping, chain-of-record
+         ▸ UTXO anchoring + inscriptions
+         ▸ Censorship resistance and protocol neutrality
