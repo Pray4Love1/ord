@@ -1,40 +1,38 @@
-# BRC-20 v2 Layered Architecture
+Layer 8 ─ Application & UX
+         ▸ Wallets, marketplaces, DEXs, analytics, mobile/web clients
+         ▸ End-user flows: mint, transfer, vest, verify
 
-The BRC-20 v2 protocol is best understood as a layered stack, where each layer
-builds on the guarantees of the layer below it.
+Layer 7 ─ Interoperability & Verifiers
+         ▸ Indexers, bridges, relayers
+         ▸ On/off-chain proof verification (ZK/identity/state)
+         ▸ Fee markets and liquidity routing
 
-```
-┌───────────────────────────────────────────────────────────────┐
-│ 8. Application Layer                                           │
-│    Wallets, marketplaces, analytics, exchanges, end-user UX    │
-├───────────────────────────────────────────────────────────────┤
-│ 7. Interoperability & Incentive Layer                          │
-│    Cross-chain bridges, fee markets, relayers, liquidity       │
-├───────────────────────────────────────────────────────────────┤
-│ 6. Governance & Compliance Layer                               │
-│    Upgrade policies, DAOs, compliance rules, emergency stops   │
-├───────────────────────────────────────────────────────────────┤
-│ 5. Identity & Attestation Layer                                │
-│    DID, KYC attestations, reputation, proof-of-personhood      │
-├───────────────────────────────────────────────────────────────┤
-│ 4. ZK & Privacy Layer                                          │
-│    State commitments, ZK proofs, selective disclosure          │
-├───────────────────────────────────────────────────────────────┤
-│ 3. BRC-20 v2 Protocol Layer                                    │
-│    Token rules, state transitions, deterministic hashing       │
-├───────────────────────────────────────────────────────────────┤
-│ 2. Ordinals / Inscriptions Layer                               │
-│    Inscribed operations, indexing, canonical serialization     │
-├───────────────────────────────────────────────────────────────┤
-│ 1. Bitcoin Base Layer                                          │
-│    UTXOs, consensus, finality, censorship resistance           │
-└───────────────────────────────────────────────────────────────┘
-```
+Layer 6 ─ Execution & State Transitions
+         ▸ Stateless → stateful updates
+         ▸ Rules for valid mints/transfers/burns
+         ▸ Replay protection, nonces, rate limits
 
-**Guiding principles**
+Layer 5 ─ Token Logic & Policy
+         ▸ Token definitions: max_supply, mintable, royalties, cap
+         ▸ Per-token policies (e.g., soulbound, whitelist-only)
+         ▸ Upgrade hooks, programmable token behavior
 
-- **Separation of concerns**: application UX should not redefine protocol rules.
-- **Determinism**: protocol state must be fully reproducible from inscriptions.
-- **Composability**: identity, governance, and privacy layers can be swapped or
-  augmented without changing the base protocol.
-- **Auditability**: each layer is independently reviewable and testable.
+Layer 4 ─ Identity & Attestation
+         ▸ DID, KYC, Sybil resistance
+         ▸ Proof-of-personhood (e.g., World ID, Gitcoin Passport)
+         ▸ ZK-backed attestations, vesting schedules
+
+Layer 3 ─ Commitment & ZK Proof Layer
+         ▸ Merkle roots, state hashes, proof generation
+         ▸ BRC20v2::ZK::TRANSFER domain separation
+         ▸ Selective disclosure, shielded logic (optional)
+
+Layer 2 ─ Inscription Payloads
+         ▸ CBOR or JSON-based operation definitions
+         ▸ Canonical format for indexing and relay
+         ▸ Fully auditable, no execution ambiguity
+
+Layer 1 ─ Bitcoin Base Layer
+         ▸ Finality, timestamping, chain-of-record
+         ▸ UTXO anchoring + inscriptions
+         ▸ Censorship resistance and protocol neutrality
