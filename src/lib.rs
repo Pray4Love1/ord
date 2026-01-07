@@ -114,6 +114,7 @@ use self::test::*;
 
 pub mod api;
 pub mod arguments;
+pub mod brc20;
 mod blocktime;
 pub mod chain;
 pub mod decimal;
@@ -141,6 +142,7 @@ pub mod subcommand;
 mod tally;
 pub mod templates;
 pub mod wallet;
+pub mod zk;
 
 type Result<T = (), E = Error> = std::result::Result<T, E>;
 type SnafuResult<T = (), E = SnafuError> = std::result::Result<T, E>;

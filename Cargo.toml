@@ -53,6 +53,7 @@ bitcoin.workspace = true
 bitcoincore-rpc = "0.19.0"
 boilerplate = { version = "1.0.0", features = ["axum"] }
 brotli = "8.0.1"
+brc20v2 = { path = "crates/brc20v2" }
 chrono = { version = "0.4.19", features = ["serde"] }
 ciborium = "0.2.1"
 clap = { version = "4.4.2", features = ["derive", "env"] }
@@ -94,6 +95,7 @@ sha3 = "0.10.8"
 snafu = "0.8.3"
 sysinfo = "0.37.0"
 tempfile.workspace = true
+thiserror = "2.0.0"
 tokio = { version = "1.43.0", features = ["rt-multi-thread"] }
 tokio-stream = "0.1.9"
 tokio-util = {version = "0.7.3", features = ["compat"] }
@@ -112,6 +114,10 @@ unindent = "0.2.1"
 [[bin]]
 name = "ord"
 path = "src/bin/main.rs"
+
+[[bin]]
+name = "brc20v2"
+path = "src/bin/brc20v2.rs"
 
 [lib]
 name = "ord"
