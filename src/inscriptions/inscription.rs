@@ -24,6 +24,42 @@ pub struct Inscription {
   pub unrecognized_even_field: bool,
 }
 
+/// BRC-20 v2 inscription structure for advanced JSON serialization workflows.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Brc20V2Inscription<'a> {
+  #[serde(flatten)]
+  pub core: Brc20V2Core<'a>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub metadata: Option<&'a serde_json::Value>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub timestamp: Option<u64>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Brc20V2Core<'a> {
+  #[serde(default = "default_protocol")]
+  pub protocol: &'static str,
+  pub token: &'a str,
+  pub action: &'a str,
+  pub state_hash: &'a str,
+  pub merkle_root: &'a str,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub proof: Option<&'a ZkProof>,
+}
+
+fn default_protocol() -> &'static str {
+  "brc20v2"
+}
+
+fn current_timestamp() -> u64 {
+  use std::time::{SystemTime, UNIX_EPOCH};
+
+  SystemTime::now()
+    .duration_since(UNIX_EPOCH)
+    .unwrap_or_default()
+    .as_secs()
+}
+
 impl Inscription {
   pub fn new(
     chain: Chain,
@@ -277,6 +313,68 @@ impl Inscription {
       .as_ref()
       .map(|cbor| Properties::from_cbor(cbor))
       .unwrap_or_default()
+  }
+}
+
+impl<'a> Brc20V2Inscription<'a> {
+  /// Create a new BRC-20 v2 inscription.
+  pub fn new(
+    token: &'a str,
+    action: &'a str,
+    state_hash: &'a str,
+    merkle_root: &'a str,
+    proof: Option<&'a ZkProof>,
+    metadata: Option<&'a serde_json::Value>,
+    timestamp: Option<u64>,
+  ) -> Self {
+    Self {
+      core: Brc20V2Core {
+        protocol: default_protocol(),
+        token,
+        action,
+        state_hash,
+        merkle_root,
+        proof,
+      },
+      metadata,
+      timestamp,
+    }
+  }
+
+  /// Create a new BRC-20 v2 inscription with a generated timestamp.
+  pub fn new_with_timestamp(
+    token: &'a str,
+    action: &'a str,
+    state_hash: &'a str,
+    merkle_root: &'a str,
+    proof: Option<&'a ZkProof>,
+    metadata: Option<&'a serde_json::Value>,
+  ) -> Self {
+    Self::new(
+      token,
+      action,
+      state_hash,
+      merkle_root,
+      proof,
+      metadata,
+      Some(current_timestamp()),
+    )
+  }
+
+  /// Serialize inscription to a JSON string.
+  pub fn to_json(&self) -> serde_json::Result<String> {
+    serde_json::to_string_pretty(self)
+  }
+
+  /// Quick validation: ensures state_hash and merkle_root are not empty.
+  pub fn validate(&self) -> Result<(), &'static str> {
+    if self.core.state_hash.is_empty() {
+      return Err("state_hash cannot be empty");
+    }
+    if self.core.merkle_root.is_empty() {
+      return Err("merkle_root cannot be empty");
+    }
+    Ok(())
   }
 }
 

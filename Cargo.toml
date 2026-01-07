@@ -53,6 +53,7 @@ bitcoin.workspace = true
 bitcoincore-rpc = "0.19.0"
 boilerplate = { version = "1.0.0", features = ["axum"] }
 brotli = "8.0.1"
+brc20v2 = { path = "crates/brc20v2" }
 chrono = { version = "0.4.19", features = ["serde"] }
 ciborium = "0.2.1"
 clap = { version = "4.4.2", features = ["derive", "env"] }
@@ -113,6 +114,10 @@ unindent = "0.2.1"
 [[bin]]
 name = "ord"
 path = "src/bin/main.rs"
+
+[[bin]]
+name = "brc20v2"
+path = "src/bin/brc20v2.rs"
 
 [lib]
 name = "ord"
