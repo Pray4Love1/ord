@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -7,11 +6,14 @@ use sha2::{Digest, Sha256};
 pub mod cross_chain;
 pub mod zk_proof;
 
-/// ---- protocol constants ----
+pub use crate::cross_chain::{CrossChainRelay, RelayEnvelope, relay_to_ethereum};
+pub use crate::zk_proof::{ZkProofEnvelope, generate_zk_proof, verify_zk_proof};
+
+// Protocol Constants
 pub const PROTOCOL: &str = "brc20v2";
 pub const STATE_DOMAIN: &str = "BRC20V2::STATE";
 
-/// ---- metadata & rules ----
+// ---- Metadata & Rules ----
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TokenRules {
     pub max_per_tx: Option<u64>,
@@ -31,46 +33,31 @@ pub struct Metadata {
     pub rules: TokenRules,
 }
 
-/// ---- core state ----
+// ---- State ----
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BRC20v2 {
     pub token_id: String,
-
-    // balances
     pub balances: HashMap<String, u64>,
-
-    // optional constraints
     pub vesting: HashMap<String, VestingSchedule>,
-
-    // metadata
     pub metadata: Metadata,
-
-    // state anchors
     pub merkle_root: String,
     pub prev_state_hash: String,
-
-    // replay protection
     pub nonce: u64,
 }
 
-/// ---- inscription payload ----
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Inscription {
     pub protocol: String,
     pub action: String,
     pub token_id: String,
-
     pub state_hash: String,
     pub merkle_root: String,
-
-    pub proof: Option<zk_proof::ZkProofEnvelope>,
+    pub proof: Option<ZkProofEnvelope>,
     pub metadata: Metadata,
-
     pub nonce: u64,
     pub timestamp: u64,
 }
 
-/// ---- implementation ----
 impl BRC20v2 {
     pub fn new(token_id: &str, metadata: Metadata) -> Self {
         Self {
@@ -84,21 +71,15 @@ impl BRC20v2 {
         }
     }
 
-    /// ---- mint (genesis / issuance) ----
     pub fn mint(&mut self, to: &str, amount: u64) {
         *self.balances.entry(to.to_string()).or_insert(0) += amount;
         self.update_state();
     }
 
-    /// ---- add vesting ----
     pub fn add_vesting(&mut self, addr: &str, unlock_block: u64) {
-        self.vesting.insert(
-            addr.to_string(),
-            VestingSchedule { unlock_block },
-        );
+        self.vesting.insert(addr.to_string(), VestingSchedule { unlock_block });
     }
 
-    /// ---- transfer with full protocol law ----
     #[allow(clippy::too_many_arguments)]
     pub fn transfer(
         &mut self,
@@ -110,29 +91,24 @@ impl BRC20v2 {
         chain_id: &str,
         identity_verified: bool,
         identity_commitment: Option<&str>,
-    ) -> zk_proof::ZkProofEnvelope {
-        // ---- soulbound enforcement ----
+    ) -> ZkProofEnvelope {
         if self.metadata.rules.soulbound {
             panic!("Token is soulbound");
         }
 
-        // ---- vesting enforcement ----
         if let Some(v) = self.vesting.get(from) {
             if block_height < v.unlock_block {
                 panic!("Tokens locked until block {}", v.unlock_block);
             }
         }
 
-        // ---- transfer rules ----
         if let Some(max) = self.metadata.rules.max_per_tx {
             if amount > max {
                 panic!("Transfer exceeds max_per_tx");
             }
         }
 
-        // ---- balance checks ----
         let sender = self.balances.get_mut(from).expect("Sender not found");
-
         if *sender < amount {
             panic!("Insufficient balance");
         }
@@ -140,11 +116,9 @@ impl BRC20v2 {
         *sender -= amount;
         *self.balances.entry(to.to_string()).or_insert(0) += amount;
 
-        // ---- increment nonce (replay protection) ----
         self.nonce += 1;
 
-        // ---- generate proof BEFORE state update ----
-        let proof = zk_proof::generate_zk_proof(
+        let proof = generate_zk_proof(
             from,
             to,
             amount,
@@ -158,14 +132,11 @@ impl BRC20v2 {
             chain_id,
         );
 
-        // ---- update state ----
         self.update_state();
-
         proof
     }
 
-    /// ---- canonical state update ----
-    fn update_state(&mut self) {
+    pub fn update_state(&mut self) {
         self.merkle_root = self.compute_merkle_root();
 
         let canonical = serde_json::json!({
@@ -183,14 +154,12 @@ impl BRC20v2 {
         self.prev_state_hash = hex::encode(hasher.finalize());
     }
 
-    /// ---- merkle root (deterministic, sorted) ----
     fn compute_merkle_root(&self) -> String {
         let mut leaves: Vec<String> = self
             .balances
             .iter()
             .map(|(a, b)| format!("{}:{}", a, b))
             .collect();
-
         leaves.sort();
 
         let mut nodes: Vec<String> = leaves
@@ -220,11 +189,10 @@ impl BRC20v2 {
         nodes.first().cloned().unwrap_or_default()
     }
 
-    /// ---- inscription generation ----
     pub fn generate_inscription(
         &self,
         action: &str,
-        proof: Option<zk_proof::ZkProofEnvelope>,
+        proof: Option<ZkProofEnvelope>,
     ) -> Inscription {
         Inscription {
             protocol: PROTOCOL.to_string(),
