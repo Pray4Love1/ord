@@ -1,0 +1,21 @@
+{
+  "bitcoin": {
+    "network": "Mainnet",
+    "rpc_url": "http://127.0.0.1:8332",
+    "ord_binary": "ord",
+    "fee_rate": 12,
+    "min_confirmations": 6
+  },
+  "ethereum": {
+    "rpc_url": "https://mainnet.infura.io/v3/YOUR_KEY",
+    "chain_id": 1,
+    "contract_address": "0xYourVerifierContract",
+    "private_key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "relay_nonce_start": 0
+  },
+  "protocol": {
+    "chain_id": "bitcoin-mainnet",
+    "require_identity": true,
+    "max_inscription_bytes": 40000
+  }
+}
