@@ -360,3 +360,333 @@ To start a new translation:
 
 6. If everything looks good, commit `XX.po` and open a pull request on GitHub.
    Other changed files should be omitted from the pull request.
+
+# Problem Statement and Solution Domain
+
+---
+
+## 14. Problem Domain
+
+Bitcoin provides:
+
+* An immutable, totally ordered ledger
+* Strong economic finality
+* A minimal, intentionally non-expressive execution environment
+
+However, **Bitcoin intentionally lacks**:
+
+* Native programmable state
+* Contract-level execution
+* Identity-aware semantics
+* Cross-domain message passing
+
+BRC-20 emerged as an attempt to represent fungible assets atop Bitcoin’s inscription mechanism.
+While functional, the current design exhibits **structural limitations** that preclude scalability, verifiability, and protocol evolution.
+
+---
+
+## 15. Failure Modes of Existing BRC-20 Systems
+
+### 15.1 Indexer Authority
+
+**Problem**
+
+State interpretation depends on centralized indexers applying informal parsing rules.
+
+**Consequences**
+
+* Divergent balances across indexers
+* Non-replayable state
+* Hidden rule changes
+* Protocol capture risk
+
+---
+
+### 15.2 Event-Based Semantics
+
+**Problem**
+
+BRC-20 treats inscriptions as *events*, not *state transitions*.
+
+**Consequences**
+
+* No canonical “current state”
+* Inability to reason about correctness
+* No invariant enforcement
+* No proof of validity beyond trust
+
+---
+
+### 15.3 Lack of Deterministic Failure
+
+**Problem**
+
+Invalid operations are silently ignored or inconsistently applied.
+
+**Consequences**
+
+* Undefined behavior
+* Non-deterministic outcomes
+* Client disagreement
+* Inability to reason formally
+
+---
+
+### 15.4 No Constraint Encoding
+
+**Problem**
+
+Transfer rules, vesting, supply caps, or governance logic cannot be expressed natively.
+
+**Consequences**
+
+* All logic offloaded to indexers
+* No cryptographic enforcement
+* No composability
+* No formal verification
+
+---
+
+### 15.5 Absence of Identity Semantics
+
+**Problem**
+
+All addresses are treated equivalently.
+
+**Consequences**
+
+* No soulbound assets
+* No reputation
+* No access control
+* No revocation semantics
+
+---
+
+### 15.6 Cross-Chain Trust Assumptions
+
+**Problem**
+
+Existing bridges rely on:
+
+* Custodians
+* Federations
+* Wrapped representations
+
+**Consequences**
+
+* Counterparty risk
+* Liquidity fragmentation
+* Bridge insolvency failures
+
+---
+
+### 15.7 Economic Misalignment
+
+**Problem**
+
+Protocol activity does not necessarily strengthen Bitcoin.
+
+**Consequences**
+
+* Blockspace consumption without security contribution
+* Miner misalignment
+* Long-term sustainability risk
+
+---
+
+## 16. Design Constraints
+
+Any solution operating atop Bitcoin MUST:
+
+1. Preserve Bitcoin’s consensus rules
+2. Avoid trusted intermediaries
+3. Be replayable from genesis
+4. Admit light-client verification
+5. Remain execution-free on-chain
+6. Align incentives with miners
+
+---
+
+## 17. Solution Overview
+
+BRC-20 v2 resolves the above by **reframing the problem**.
+
+The protocol does **not** attempt to add execution to Bitcoin.
+Instead, it introduces **provable state evolution**.
+
+---
+
+## 18. Core Solutions
+
+---
+
+### 18.1 State Machines over Events
+
+**Resolution**
+
+All token behavior is defined as deterministic state transitions:
+
+```
+Sₙ = T(Sₙ₋₁, P, C)
+```
+
+Where:
+
+* `S` is state
+* `P` is a proof
+* `C` is contextual Bitcoin data
+
+**Result**
+
+* Canonical state
+* Replayability
+* Formal reasoning
+* Stateless clients
+
+---
+
+### 18.2 Cryptographic Validity Proofs
+
+**Resolution**
+
+Transition correctness is attested via zero-knowledge proofs.
+
+**Result**
+
+* No execution on Bitcoin
+* Arbitrary logic off-chain
+* On-chain commitments only
+* Verifiable correctness
+
+---
+
+### 18.3 Canonical Serialization & Hashing
+
+**Resolution**
+
+All protocol objects are canonically serialized prior to hashing.
+
+**Result**
+
+* Indexer independence
+* Deterministic replay
+* No hidden interpretation layers
+
+---
+
+### 18.4 Identity as a Constraint, Not Metadata
+
+**Resolution**
+
+Identity enters the system as a cryptographic commitment, not a label.
+
+**Result**
+
+* Soulbound assets
+* Conditional transfers
+* Revocation & expiry
+* Privacy preservation
+
+---
+
+### 18.5 Explicit Failure Semantics
+
+**Resolution**
+
+All invalid transitions resolve to deterministic failure states.
+
+**Result**
+
+* No silent errors
+* Verifiable rejection
+* Client agreement
+* Formal safety analysis
+
+---
+
+### 18.6 Proof-Carrying Cross-Domain Messages
+
+**Resolution**
+
+Bitcoin becomes the root of truth for other chains via proof export.
+
+**Result**
+
+* No wrapped assets
+* No custody
+* No federations
+* Trust-minimized interoperability
+
+---
+
+### 18.7 Time as a First-Class Primitive
+
+**Resolution**
+
+Block height replaces wall-clock time.
+
+**Result**
+
+* Native vesting
+* Epoch governance
+* Deterministic scheduling
+* No oracle dependencies
+
+---
+
+### 18.8 Economic Alignment
+
+**Resolution**
+
+All activity consumes Bitcoin blockspace and fees.
+
+**Result**
+
+* Miner incentive alignment
+* Post-subsidy security contribution
+* Sustainable protocol usage
+
+---
+
+## 19. What This Enables That Was Previously Impossible
+
+| Capability                | Legacy BRC-20 | BRC-20 v2 |
+| ------------------------- | ------------- | --------- |
+| Stateless verification    | ❌             | ✅         |
+| Deterministic replay      | ❌             | ✅         |
+| Supply invariants         | ❌             | ✅         |
+| Vesting                   | ❌             | ✅         |
+| Soulbound tokens          | ❌             | ✅         |
+| Identity constraints      | ❌             | ✅         |
+| Cross-chain trustless use | ❌             | ✅         |
+| Miner-aligned economics   | ❌             | ✅         |
+
+---
+
+## 20. Non-Goals
+
+BRC-20 v2 intentionally does **not**:
+
+* Introduce smart contracts on Bitcoin
+* Modify Bitcoin consensus
+* Compete with Ethereum-style execution
+* Replace Layer-2 systems
+
+It is a **state and proof protocol**, not a VM.
+
+---
+
+## 21. Summary
+
+The problem is **not** that Bitcoin lacks programmability.
+The problem is that existing protocols lack **verifiable state evolution**.
+
+BRC-20 v2 resolves this by:
+
+* Making state explicit
+* Making correctness provable
+* Making identity enforceable
+* Making time deterministic
+* Making bridges trustless
+
+Bitcoin becomes not a smart contract platform, but a **cryptographic court of final appeal**.
