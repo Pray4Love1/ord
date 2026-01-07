@@ -6,8 +6,8 @@ use std::collections::HashMap;
 pub mod cross_chain;
 pub mod zk_proof;
 
-pub use crate::cross_chain::CrossChainRelay;
-pub use crate::zk_proof::{ZkProof, ZkProofRequest};
+pub use crate::cross_chain::{CrossChainRelay, RelayEnvelope, relay_to_ethereum};
+pub use crate::zk_proof::{ZkProof, ZkProofRequest, ZkProofEnvelope, generate_zk_proof, verify_zk_proof};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Metadata {
@@ -96,13 +96,20 @@ impl BRC20v2 {
         *from_balance -= amount;
         *self.balances.entry(to.to_string()).or_insert(0) += amount;
 
-        let proof = zk_proof::generate_zk_proof(
+        let proof = generate_zk_proof(
             from,
             to,
             amount,
             &self.prev_state_hash,
             identity_verified,
-        );
+            None,
+            0,
+            current_block,
+            0,
+            Some(1_000_000_000),
+            "bitcoin-mainnet",
+        )
+        .proof_hash;
 
         self.update_state();
         proof
