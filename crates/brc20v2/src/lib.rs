@@ -1,7 +1,22 @@
+mod config;
+mod errors;
+mod identity;
+mod inscription;
+mod merkle;
+mod state;
+mod zk;
+
+pub mod relay;
+
 use std::collections::HashMap;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+
+use config::TokenConfig;
+use errors::Brc20Error;
+use state::TokenState;
+use zk::{generate_proof, ZkProof};
 
 pub mod cross_chain;
 pub mod zk_proof;
@@ -9,11 +24,9 @@ pub mod zk_proof;
 pub use crate::cross_chain::{CrossChainRelay, RelayEnvelope, relay_to_ethereum};
 pub use crate::zk_proof::{ZkProofEnvelope, generate_zk_proof, verify_zk_proof};
 
-// Protocol Constants
 pub const PROTOCOL: &str = "brc20v2";
 pub const STATE_DOMAIN: &str = "BRC20V2::STATE";
 
-// ---- Metadata & Rules ----
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TokenRules {
     pub max_per_tx: Option<u64>,
@@ -33,7 +46,6 @@ pub struct Metadata {
     pub rules: TokenRules,
 }
 
-// ---- State ----
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BRC20v2 {
     pub token_id: String,
@@ -80,7 +92,6 @@ impl BRC20v2 {
         self.vesting.insert(addr.to_string(), VestingSchedule { unlock_block });
     }
 
-    #[allow(clippy::too_many_arguments)]
     pub fn transfer(
         &mut self,
         from: &str,
