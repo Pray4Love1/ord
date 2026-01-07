@@ -2,12 +2,22 @@
 name = "brc20v2"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+repository = "https://github.com/your-org/brc20v2"
 
 [dependencies]
+# Core
 anyhow = "1.0"
-hex = "0.4"
+hex = { version = "0.4", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-sha2 = "0.10"
-tokio = { version = "1.43.0", features = ["rt-multi-thread"] }
-web3 = "0.20"
+sha2 = "0.10.8"
+
+# Ethereum/Web3
+web3 = { version = "0.20", features = ["rustls"] }
+
+# Async runtime
+tokio = { version = "1.43.0", features = ["rt-multi-thread", "macros"] }
+
+# Time & dates
+chrono = { version = "0.4.19", features = ["serde"] }

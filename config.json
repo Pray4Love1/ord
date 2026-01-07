@@ -91,6 +91,10 @@
       "reorg_grace_period_s": 3600,
       "dust_limit_sat": 546,
       "min_output_value_sat": 1000
+    },
+    "legacy": {
+      "fee_per_byte": 10,
+      "rpc_url": "http://127.0.0.1:8332"
     }
   },
 
@@ -98,7 +102,7 @@
     "network_name": "ethereum",
     "chain_id": 1,
     "rpc": {
-      "primary": "https://mainnet.infura.io/v3/YOUR_PROJECT_ID",
+      "primary": "http://127.0.0.1:8545",
       "failover": [
         "https://rpc.ankr.com/eth",
         "https://ethereum.publicnode.com"
@@ -110,16 +114,15 @@
       "ws_reconnect_interval_s": 15
     },
     "log_filter": {
-      "bridge_contract": "0xYourBridgeAddress",
+      "bridge_contract": "0x0000000000000000000000000000000000000000",
       "topics": [
-        "0xddf252ad",  // ERC20 Transfer
-        "0xYourCustomEventSignature"
+        "0xddf252ad"
       ],
       "polling_interval_s": 15
     },
     "signer": {
       "type": "private_key",
-      "private_key": "0x...",
+      "private_key": "0x0000000000000000000000000000000000000000000000000000000000000000",
       "address": "0xYourRelayWallet",
       "nonce_management": {
         "strategy": "optimistic",
@@ -129,9 +132,9 @@
       }
     },
     "contract": {
-      "bridge": "0xYourBridgeAddress",
-      "token_factory": "0xTokenFactoryAddr",
-      "verifier": "0xVerifierAddress"
+      "bridge": "0x0000000000000000000000000000000000000000",
+      "token_factory": "0x0000000000000000000000000000000000000000",
+      "verifier": "0x0000000000000000000000000000000000000000"
     },
     "gas": {
       "multiplier": 1.25,
@@ -160,6 +163,11 @@
         "price_drop_percent_24h": 20,
         "gas_spike_multiplier": 4.0
       }
+    },
+    "legacy": {
+      "eth_rpc": "http://127.0.0.1:8545",
+      "eth_contract": "0x0000000000000000000000000000000000000000",
+      "eth_private_key": "0000000000000000000000000000000000000000000000000000000000000000"
     }
   },
 
