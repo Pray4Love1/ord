@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BRC-20 v2 Canonical Token State",
+  "type": "object",
+  "required": [
+    "version",
+    "token_id",
+    "name",
+    "symbol",
+    "decimals",
+    "max_supply",
+    "minted_supply",
+    "rules",
+    "prev_state_hash",
+    "state_hash",
+    "merkle_root",
+    "balances",
+    "ledger"
+  ],
+  "properties": {
+    "version": { "type": "string" },
+    "token_id": { "type": "string" },
+    "name": { "type": "string" },
+    "symbol": { "type": "string" },
+    "decimals": { "type": "integer", "minimum": 0 },
+    "max_supply": { "type": "integer", "minimum": 0 },
+    "minted_supply": { "type": "integer", "minimum": 0 },
+    "rules": {
+      "type": "object",
+      "required": ["soulbound", "transferable", "vesting"],
+      "properties": {
+        "soulbound": { "type": "boolean" },
+        "transferable": { "type": "boolean" },
+        "vesting": {
+          "type": "object",
+          "required": ["enabled"],
+          "properties": {
+            "enabled": { "type": "boolean" }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "prev_state_hash": { "type": "string" },
+    "state_hash": { "type": "string" },
+    "merkle_root": { "type": "string" },
+    "balances": {
+      "type": "object",
+      "additionalProperties": { "type": "integer", "minimum": 0 }
+    },
+    "vesting": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["total", "start_height", "cliff_height", "duration"],
+        "properties": {
+          "total": { "type": "integer", "minimum": 0 },
+          "start_height": { "type": "integer", "minimum": 0 },
+          "cliff_height": { "type": "integer", "minimum": 0 },
+          "duration": { "type": "integer", "minimum": 1 },
+          "spent": { "type": "integer", "minimum": 0 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "ledger": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["op", "timestamp", "tx"],
+        "properties": {
+          "op": { "type": "string", "enum": ["mint", "transfer"] },
+          "timestamp": { "type": "string" },
+          "tx": { "type": "object" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
