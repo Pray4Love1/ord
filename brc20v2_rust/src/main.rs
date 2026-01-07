@@ -1,6 +1,8 @@
 mod brc20v2;
 mod config;
 mod cross_chain;
+mod errors;
+mod relay;
 mod zk_proof;
 
 use crate::brc20v2::{BRC20v2, Metadata};
@@ -11,6 +13,8 @@ use std::io::Write;
 use tokio::runtime::Runtime;
 
 fn main() {
+    tracing_subscriber::fmt::init();
+
     let config = Config::load("config.json");
 
     let mut token = BRC20v2::new("MYTOKEN");
@@ -68,11 +72,13 @@ fn main() {
         .expect("Failed to broadcast transfer");
 
     let rt = Runtime::new().expect("Failed to create runtime");
-    let relay_tx = rt.block_on(cross_chain::relay_to_ethereum(
-        &serde_json::to_string(&transfer_inscription).unwrap(),
-        &config.eth_rpc,
-        &config.eth_contract,
-        &config.eth_private_key,
-    ));
+    let relay_tx = rt
+        .block_on(cross_chain::relay_to_ethereum(
+            &serde_json::to_string(&transfer_inscription).unwrap(),
+            &config.eth_rpc,
+            &config.eth_contract,
+            &config.eth_private_key,
+        ))
+        .expect("Relay failed");
     println!("Relay tx hash: {:?}", relay_tx);
 }
