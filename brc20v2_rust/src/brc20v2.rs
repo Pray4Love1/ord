@@ -1,15 +1,10 @@
+use crate::zk_proof::generate_zk_proof;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 
-pub mod cross_chain;
-pub mod zk_proof;
-
-pub use crate::cross_chain::CrossChainRelay;
-pub use crate::zk_proof::{ZkProof, ZkProofRequest};
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Metadata {
     pub name: String,
     pub symbol: String,
@@ -19,7 +14,7 @@ pub struct Metadata {
     pub vesting: HashMap<String, u64>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct BRC20v2 {
     pub token_id: String,
     pub balances: HashMap<String, u64>,
@@ -28,7 +23,7 @@ pub struct BRC20v2 {
     pub merkle_root: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Serialize)]
 pub struct Inscription {
     pub inscription_type: String,
     pub token_id: String,
@@ -92,44 +87,52 @@ impl BRC20v2 {
         if *from_balance < amount {
             panic!("Insufficient balance");
         }
-
         *from_balance -= amount;
         *self.balances.entry(to.to_string()).or_insert(0) += amount;
-
-        let proof = zk_proof::generate_zk_proof(
-            from,
-            to,
-            amount,
-            &self.prev_state_hash,
-            identity_verified,
-        );
-
+        let proof = generate_zk_proof(from, to, amount, &self.prev_state_hash, identity_verified);
         self.update_state();
         proof
     }
 
     pub fn update_state(&mut self) {
-        let nodes: Vec<String> = self
+        let leaves: Vec<String> = self
             .balances
             .iter()
             .map(|(key, value)| format!("{}:{}", key, value))
-            .map(|entry| {
+            .collect();
+        let mut nodes: Vec<String> = leaves
+            .iter()
+            .map(|leaf| {
                 let mut hasher = Sha256::new();
-                hasher.update(entry.as_bytes());
+                hasher.update(leaf.as_bytes());
                 hex::encode(hasher.finalize())
             })
             .collect();
 
-        self.merkle_root = merkle_root(nodes);
-
+        while nodes.len() > 1 {
+            let mut temp: Vec<String> = Vec::new();
+            let mut index = 0;
+            while index < nodes.len() {
+                let combined = if index + 1 < nodes.len() {
+                    format!("{}{}", nodes[index], nodes[index + 1])
+                } else {
+                    nodes[index].clone()
+                };
+                let mut hasher = Sha256::new();
+                hasher.update(combined.as_bytes());
+                temp.push(hex::encode(hasher.finalize()));
+                index += 2;
+            }
+            nodes = temp;
+        }
+        self.merkle_root = if nodes.is_empty() { String::new() } else { nodes[0].clone() };
         let state = serde_json::json!({
             "token_id": self.token_id,
             "balances": self.balances,
             "metadata": self.metadata,
             "merkle_root": self.merkle_root,
-            "timestamp": Utc::now().timestamp(),
+            "timestamp": Utc::now().timestamp()
         });
-
         let mut hasher = Sha256::new();
         hasher.update(state.to_string().as_bytes());
         self.prev_state_hash = hex::encode(hasher.finalize());
@@ -147,29 +150,4 @@ impl BRC20v2 {
             timestamp: Utc::now().timestamp(),
         }
     }
-}
-
-fn merkle_root(mut nodes: Vec<String>) -> String {
-    if nodes.is_empty() {
-        return String::new();
-    }
-
-    while nodes.len() > 1 {
-        let mut temp = Vec::with_capacity((nodes.len() + 1) / 2);
-        let mut i = 0;
-        while i < nodes.len() {
-            let combined = if i + 1 < nodes.len() {
-                format!("{}{}", nodes[i], nodes[i + 1])
-            } else {
-                nodes[i].clone()
-            };
-            let mut hasher = Sha256::new();
-            hasher.update(combined.as_bytes());
-            temp.push(hex::encode(hasher.finalize()));
-            i += 2;
-        }
-        nodes = temp;
-    }
-
-    nodes[0].clone()
 }
