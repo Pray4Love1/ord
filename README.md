@@ -1,362 +1,296 @@
-<h1 align=center><code>ord</code></h1>
+# BRC-20 v2
 
-<div align=center>
-  <a href=https://crates.io/crates/ord>
-    <img src=https://img.shields.io/crates/v/ord.svg alt="crates.io version">
-  </a>
-  <a href=https://github.com/ordinals/ord/actions/workflows/ci.yaml>
-    <img src=https://github.com/ordinals/ord/actions/workflows/ci.yaml/badge.svg alt="build status">
-  </a>
-  <a href=https://github.com/ordinals/ord/releases>
-    <img src=https://img.shields.io/github/downloads/ordinals/ord/total.svg alt=downloads>
-  </a>
-  <a href=https://discord.gg/ordinals>
-    <img src=https://img.shields.io/discord/987504378242007100?logo=discord alt="chat on discord">
-  </a>
-</div>
-<br>
+### A Proof-Oriented, Identity-Constrained State Transition Protocol Anchored to Bitcoin
 
-`ord` is an index, block explorer, and command-line wallet. It is experimental
-software with no warranty. See [LICENSE](LICENSE) for more details.
+## Abstract
 
-Ordinal theory imbues satoshis with numismatic value, allowing them to
-be collected and traded as curios.
+BRC-20 v2 specifies a deterministic, replayable, proof-verified token protocol anchored to Bitcoin’s transaction ordering and inscription mechanism.
+It abandons the notion of token events in favor of state transitions, and replaces execution with cryptographic attestation.
 
-Ordinal numbers are serial numbers for satoshis, assigned in the order in which
-they are mined, and preserved across transactions.
+The protocol introduces:
 
-See [the docs](https://docs.ordinals.com) for documentation and guides.
+- Canonical state machines
+- Zero-knowledge validity proofs
+- Identity-constrained transfer semantics
+- Time-bounded state evolution
+- Cross-domain proof relays
 
-See [the BIP](bip.mediawiki) for a technical description of the assignment and
-transfer algorithm.
+All without altering Bitcoin consensus.
 
-See [the project board](https://github.com/orgs/ordinals/projects/1) for
-currently prioritized issues.
+## 0. Terminology
 
-Join [the Discord server](https://discord.gg/87cjuz4FYg) to chat with fellow
-ordinal degenerates.
+| Term | Definition |
+| --- | --- |
+| **State** | A complete, deterministic description of token balances and parameters |
+| **Transition** | A mapping from a prior state to a new state |
+| **Commitment** | A cryptographic hash representing state or proof validity |
+| **Inscription** | An immutable Bitcoin data carrier anchoring protocol messages |
+| **Proof** | A zero-knowledge attestation of transition correctness |
+| **Subject** | An identity-bearing participant |
+| **Epoch** | A block-height-bounded time interval |
 
-Donate
-------
+## 1. System Model
 
-Ordinals is open-source and community funded. The current lead maintainer of
-`ord` is [raphjaph](https://github.com/raphjaph/). Raph's work on `ord` is
-entirely funded by donations. If you can, please consider donating!
+The system consists of:
 
-The donation address is
-[bc1qguzk63exy7h5uygg8m2tcenca094a8t464jfyvrmr0s6wkt74wls3zr5m3](https://mempool.space/address/bc1qguzk63exy7h5uygg8m2tcenca094a8t464jfyvrmr0s6wkt74wls3zr5m3).
+1. Bitcoin as an immutable, totally ordered log
+2. Stateless verifiers reconstructing token state
+3. Participants generating validity proofs
+4. Optional external verifiers consuming Bitcoin-anchored commitments
 
-This address is 2 of 4 multisig wallet with keys held by
-[raphjaph](https://twitter.com/raphjaph),
-[erin](https://twitter.com/realizingerin),
-[rodarmor](https://twitter.com/rodarmor), and
-[ordinally](https://twitter.com/veryordinally).
+There exists no global mutable storage beyond Bitcoin itself.
 
-Bitcoin received will go towards funding maintenance and development of `ord`,
-as well as hosting costs for [ordinals.com](https://ordinals.com).
+## 2. Layered Architecture
 
-Thank you for donating!
+The protocol is composed of seven layers, each decomposed into microlayers.
+Each layer is individually verifiable and strictly compositional.
 
-Wallet
-------
+## 3. Layer 0 — Bitcoin Substrate
 
-`ord` relies on Bitcoin Core for private key management and transaction signing.
-This has a number of implications that you must understand in order to use
-`ord` wallet commands safely:
+### Purpose
 
-- Bitcoin Core is not aware of inscriptions and does not perform sat
-  control. Using `bitcoin-cli` commands and RPC calls with `ord` wallets may
-  lead to loss of inscriptions.
+Provide ordering, immutability, time, and economic finality.
 
-- `ord wallet` commands automatically load the `ord` wallet given by the
-  `--name` option, which defaults to 'ord'. Keep in mind that after running
-  an `ord wallet` command, an `ord` wallet may be loaded.
+### Microlayers
 
-- Because `ord` has access to your Bitcoin Core wallets, `ord` should not be
-  used with wallets that contain a material amount of funds. Keep ordinal and
-  cardinal wallets segregated.
+#### 3.0.1 Transaction Ordering
 
-Security
---------
+Bitcoin block height and intra-block ordinal ordering define a total order over all protocol messages.
 
-The `ord server` explorer hosts untrusted HTML and JavaScript. This creates
-potential security vulnerabilities, including cross-site scripting and spoofing
-attacks. You are solely responsible for understanding and mitigating these
-attacks. See the [documentation](docs/src/security.md) for more details.
+#### 3.0.2 Temporal Anchoring
 
-Installation
-------------
+Block height serves as the sole time oracle.
+`nLockTime` and `OP_CHECKSEQUENCEVERIFY` MAY constrain state transitions.
 
-`ord` is written in Rust and can be built from
-[source](https://github.com/ordinals/ord). Pre-built binaries are available on the
-[releases page](https://github.com/ordinals/ord/releases).
+#### 3.0.3 Economic Coupling
 
-You can install the latest pre-built binary from the command line with:
+Protocol usage consumes blockspace and fees, aligning miner incentives with protocol activity.
 
-```sh
-curl --proto '=https' --tlsv1.2 -fsLS https://ordinals.com/install.sh | bash -s
-```
+## 4. Layer 1 — State & Inscription Layer
 
-Once `ord` is installed, you should be able to run `ord --version` on the
-command line.
+### Purpose
 
-Building
---------
+Define token logic as deterministic state machines.
 
-On Linux, `ord` requires `libssl-dev` when building from source.
+### Microlayers
 
-On Debian-derived Linux distributions, including Ubuntu:
+#### 4.1.1 Canonical State Definition
+
+A token state `S` is defined as:
 
 ```
-sudo apt-get install pkg-config libssl-dev build-essential
+S := {
+  token_id,
+  balances,
+  supply,
+  parameters,
+  epoch
+}
 ```
 
-On Red Hat-derived Linux distributions:
+#### 4.1.2 State Commitment
+
+Each state is represented by:
 
 ```
-yum install -y pkgconfig openssl-devel
-yum groupinstall "Development Tools"
+H(S) = hash(serialize(S))
 ```
 
-You'll also need Rust:
+#### 4.1.3 Transition Function
+
+A transition `T` is valid iff:
 
 ```
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+H(S_n) = T(H(S_{n-1}), proof, context)
 ```
 
-Clone the `ord` repo:
+#### 4.1.4 Inscription Payload
+
+Each Bitcoin inscription contains:
+
+- `prev_state_hash`
+- `new_state_hash`
+- `action`
+- `metadata_hash`
+- `proof_commitment (optional)`
+
+## 5. Layer 2 — Zero-Knowledge Validity Layer
+
+### Purpose
+
+Replace execution with provable correctness.
+
+### Microlayers
+
+#### 5.2.1 Proof Semantics
+
+A proof attests:
+
+- Balance preservation
+- Supply invariants
+- Transfer constraints
+- Temporal validity
+- Identity compliance
+
+#### 5.2.2 Proof Commitments
+
+Only `hash(proof)` is inscribed.
+Proof material is verified off-chain.
+
+#### 5.2.3 Aggregation
+
+Multiple transitions MAY be validated within a single proof.
+
+#### 5.2.4 Circuit Modularity
+
+Proof circuits are versioned, parameterized, and non-self-modifying.
+
+## 6. Layer 3 — Identity & SoulSync Layer
+
+### Purpose
+
+Introduce identity as a first-class constraint.
+
+### Microlayers
+
+#### 6.3.1 Identity Commitments
+
+An identity commitment is defined as:
 
 ```
-git clone https://github.com/ordinals/ord.git
-cd ord
+I := hash(subject || domain || epoch)
 ```
 
-To build a specific version of `ord`, first checkout that version:
+No personal data is revealed.
 
-```
-git checkout <VERSION>
-```
+#### 6.3.2 Verification
 
-And finally to actually build `ord`:
+Identity validity is asserted via:
 
-```
-cargo build --release
-```
+- Signature
+- ZK proof
+- Pre-committed hash
 
-Once built, the `ord` binary can be found at `./target/release/ord`.
+#### 6.3.3 Soulbound Semantics
 
-`ord` requires `rustc` version 1.79.0 or later. Run `rustc --version` to ensure
-you have this version. Run `rustup update` to get the latest stable release.
+Tokens MAY be marked non-transferable or conditionally transferable.
 
-### Docker
+#### 6.3.4 Revocation & Expiry
 
-A Docker image can be built with:
+Identity-bound privileges MAY expire or be revoked via state transition.
 
-```
-docker build -t ordinals/ord .
-```
+## 7. Layer 4 — Protocol Rule & Error Layer
 
-### Homebrew
+### Purpose
 
-`ord` is available in [Homebrew](https://brew.sh/):
+Ensure explicit, deterministic failure.
 
-```
-brew install ord
-```
+### Microlayers
 
-### Debian Package
+#### 7.4.1 Rule Enumeration
 
-To build a `.deb` package:
+All failure conditions are explicitly enumerated:
 
-```
-cargo install cargo-deb
-cargo deb
-```
+- Identity failure
+- Balance violation
+- Vesting lock
+- Soulbound restriction
+- Proof invalidity
+- Relay failure
 
-Contributing
-------------
+#### 7.4.2 Replay Determinism
 
-If you wish to contribute there are a couple things that are helpful to know. We
-put a lot of emphasis on proper testing in the code base, with three broad
-categories of tests: unit, integration and fuzz. Unit tests can usually be found at
-the bottom of a file in a mod block called `tests`. If you add or modify a
-function please also add a corresponding test. Integration tests try to test
-end-to-end functionality by executing a subcommand of the binary. Those can be
-found in the [tests](tests) directory. We don't have a lot of fuzzing but the
-basic structure of how we do it can be found in the [fuzz](fuzz) directory.
+Given the same ordered inscriptions, all honest verifiers MUST derive identical failure or success outcomes.
 
-We strongly recommend installing [just](https://github.com/casey/just) to make
-running the tests easier. To run our CI test suite you would do:
+## 8. Layer 5 — Relay & External Verification Layer
 
-```
-just ci
-```
+### Purpose
 
-This corresponds to the commands:
+Export Bitcoin-anchored truth to external domains.
 
-```
-cargo fmt -- --check
-cargo test --all
-cargo test --all -- --ignored
-```
+### Microlayers
 
-Have a look at the [justfile](justfile) to see some more helpful recipes
-(commands). Here are a couple more good ones:
+#### 8.5.1 Proof-Carrying Messages
 
-```
-just fmt
-just fuzz
-just doc
-just watch ltest --all
-```
+Messages contain:
 
-If the tests are failing or hanging, you might need to increase the maximum
-number of open files by running `ulimit -n 1024` in your shell before you run
-the tests, or in your shell configuration.
+- Bitcoin state root
+- Proof commitment
+- Domain-specific metadata
 
-We also try to follow a TDD (Test-Driven-Development) approach, which means we
-use tests as a way to get visibility into the code. Tests have to run fast for that
-reason so that the feedback loop between making a change, running the test and
-seeing the result is small. To facilitate that we created a mocked Bitcoin Core
-instance in [mockcore](./crates/mockcore)
+#### 8.5.2 Stateless Verification
 
-Syncing
--------
+External chains verify proofs without custody or mint/burn mirroring.
 
-`ord` requires a synced `bitcoind` node with `-txindex` to build the index of
-satoshi locations. `ord` communicates with `bitcoind` via RPC.
+#### 8.5.3 No Wrapped Assets
 
-If `bitcoind` is run locally by the same user, without additional
-configuration, `ord` should find it automatically by reading the `.cookie` file
-from `bitcoind`'s datadir, and connecting using the default RPC port.
+No asset custody, federation, or synthetic representation is required.
 
-If `bitcoind` is not on mainnet, is not run by the same user, has a non-default
-datadir, or a non-default port, you'll need to pass additional flags to `ord`.
-See `ord --help` for details.
+## 9. Layer 6 — Indexer Independence Layer
 
-`bitcoind` RPC Authentication
------------------------------
+### Purpose
 
-`ord` makes RPC calls to `bitcoind`, which usually requires a username and
-password.
+Eliminate centralized interpretation.
 
-By default, `ord` looks a username and password in the cookie file created by
-`bitcoind`.
+### Microlayers
 
-The cookie file path can be configured using `--cookie-file`:
+#### 9.6.1 Canonical Parsing
 
-```
-ord --cookie-file /path/to/cookie/file server
-```
+Serialization formats are canonical and collision-resistant.
 
-Alternatively, `ord` can be supplied with a username and password on the
-command line:
+#### 9.6.2 Replayable State
 
-```
-ord --bitcoin-rpc-username foo --bitcoin-rpc-password bar server
-```
+Any verifier MAY reconstruct full state from genesis.
 
-Using environment variables:
+#### 9.6.3 Merkle Snapshots
 
-```
-export ORD_BITCOIN_RPC_USERNAME=foo
-export ORD_BITCOIN_RPC_PASSWORD=bar
-ord server
-```
+Optional Merkle roots accelerate light-client verification.
 
-Or in the config file:
+## 10. Layer 7 — Application Layer
 
-```yaml
-bitcoin_rpc_username: foo
-bitcoin_rpc_password: bar
-```
+### Purpose
 
-Logging
---------
+Enable systems, not scripts.
 
-`ord` uses [env_logger](https://docs.rs/env_logger/latest/env_logger/). Set the
-`RUST_LOG` environment variable in order to turn on logging. For example, run
-the server and show `info`-level log messages and above:
+### Microlayers
 
-```
-$ RUST_LOG=info cargo run server
-```
+- Streaming payments
+- Vesting schedules
+- Reputation systems
+- DAO governance
+- Identity-gated access
+- Cross-chain liquidity proofs
 
-Set the `RUST_BACKTRACE` environment variable in order to turn on full rust
-backtrace. For example, run the server and turn on debugging and full backtrace:
+## 11. Security Model
 
-```
-$ RUST_BACKTRACE=1 RUST_LOG=debug ord server
-```
+Security derives from:
 
-New Releases
-------------
+- Bitcoin finality
+- Cryptographic soundness of proofs
+- Deterministic state replay
+- Absence of mutable global state
 
-Release commit messages use the following template:
+No trusted third parties exist.
 
-```
-Release x.y.z
+## 12. Economic Considerations
 
-- Bump version: x.y.z → x.y.z
-- Update changelog
-- Update changelog contributor credits
-- Update dependencies
-```
+Protocol usage:
 
-Translations
-------------
+- Consumes blockspace
+- Pays miners
+- Strengthens Bitcoin post-subsidy
 
-To translate [the docs](https://docs.ordinals.com) we use
-[mdBook i18n helper](https://github.com/google/mdbook-i18n-helpers).
+No parasitic incentives are introduced.
 
-See
-[mdbook-i18n-helpers usage guide](https://github.com/google/mdbook-i18n-helpers/blob/main/i18n-helpers/USAGE.md)
-for help.
+## 13. Conclusion
 
-Adding a new translations is somewhat involved, so feel free to start
-translation and open a pull request, even if your translation is incomplete.
+BRC-20 v2 reframes fungible tokens as:
 
-Take a look at
-[this commit](https://github.com/ordinals/ord/commit/329f31bf6dac207dad001507dd6f18c87fdef355)
-for an example of adding a new translation. A maintainer will help you integrate it
-into our build system.
+- Deterministic state machines
+- Verified by proofs
+- Governed by time
+- Constrained by identity
+- Anchored to Bitcoin
 
-To start a new translation:
-
-1. Install `mdbook`, `mdbook-i18n-helpers`, and `mdbook-linkcheck`:
-
-   ```
-   cargo install mdbook mdbook-i18n-helpers mdbook-linkcheck
-   ```
-
-2. Generate a new `pot` file named `messages.pot`:
-
-   ```
-   MDBOOK_OUTPUT='{"xgettext": {"pot-file": "messages.pot"}}'
-   mdbook build -d po
-   ```
-
-3. Run `msgmerge` on `XX.po` where `XX` is the two-letter
-   [ISO-639](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes) code for
-   the language you are translating into. This will update the `po` file with
-   the text of the most recent English version:
-
-   ```
-   msgmerge --update po/XX.po po/messages.pot
-   ```
-
-4. Untranslated sections are marked with `#, fuzzy` in `XX.po`. Edit the
-   `msgstr` string with the translated text.
-
-5. Execute the `mdbook` command to rebuild the docs. For Chinese, whose
-   two-letter ISO-639 code is `zh`:
-
-   ```
-   mdbook build docs -d build
-   MDBOOK_BOOK__LANGUAGE=zh mdbook build docs -d build/zh
-   mv docs/build/zh/html docs/build/html/zh
-   python3 -m http.server --directory docs/build/html --bind 127.0.0.1 8080
-   ```
-
-6. If everything looks good, commit `XX.po` and open a pull request on GitHub.
-   Other changed files should be omitted from the pull request.
+This is not “DeFi on Bitcoin”.
+It is Bitcoin as the canonical state oracle.
