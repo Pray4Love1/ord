@@ -2,11 +2,28 @@
 name = "brc20v2"
 version = "0.1.0"
 edition = "2024"
-license = "CC0-1.0"
+license = "MIT"
+repository = "https://github.com/your-org/brc20v2"
+description = "BRC-20 v2 protocol with cross-chain relay and zk-proof state machine"
+homepage = "https://your-org.github.io/brc20v2"
+authors = ["Your Name <you@example.com>"]
+rust-version = "1.70"
 
 [dependencies]
-hex = { workspace = true }
-serde = { workspace = true, features = ["derive"] }
+# Core utilities
+anyhow = "1.0"
+hex = { version = "0.4.3", features = ["serde"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 sha2 = "0.10.8"
+chrono = { version = "0.4.19", features = ["serde"] }
 thiserror = "2.0.11"
-web3 = { version = "0.19.0", default-features = false, features = ["http", "tokio"] }
+
+# Ethereum/Web3 client
+web3 = { version = "0.20", features = ["http", "signing", "rustls"] }
+
+# Async runtime
+tokio = { version = "1.43.0", features = ["rt-multi-thread", "macros"] }
+
+# Optional: structured logging
+tracing = "0.1"

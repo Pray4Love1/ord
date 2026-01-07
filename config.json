@@ -1,0 +1,246 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BRC-20 Ethereum Bridge Configuration - Advanced E2E",
+  "network": "mainnet",
+  "environment": "production",
+  "instance_id": "brc20-eth-bridge-v1-prod",
+
+  "log": {
+    "level": "info",
+    "format": "json",
+    "path": "/var/log/brc20-bridge.log",
+    "rotation": {
+      "max_size_mb": 500,
+      "max_files": 15,
+      "compress": true
+    },
+    "sensitive_fields": ["private_key", "seed", "password", "mnemonic"]
+  },
+
+  "metrics": {
+    "enabled": true,
+    "port": 9090,
+    "path": "/metrics",
+    "labels": {
+      "service": "brc20-relay",
+      "env": "production",
+      "region": "us-west-2"
+    }
+  },
+
+  "session": {
+    "persistence": true,
+    "replay_protection": true,
+    "recovery_window_s": 86400
+  },
+
+  "bitcoin": {
+    "network": "mainnet",
+    "rpc": {
+      "type": "bitcoind",
+      "primary": {
+        "url": "http://127.0.0.1:8332",
+        "username": "bridgeuser",
+        "password": "SECURE_64_CHAR",
+        "timeout_ms": 45000,
+        "max_retries": 5,
+        "retry_backoff_ms": [1000, 2000, 4000, 8000]
+      },
+      "failover": [
+        "http://secondary-node:8332",
+        "http://tertiary-node:8332"
+      ],
+      "use_ssl": false,
+      "cookie_auth": {
+        "enabled": true,
+        "path": "~/.bitcoin/.cookie",
+        "refresh_interval_s": 300
+      }
+    },
+    "ord": {
+      "mode": "cli",
+      "binary_path": "/usr/local/bin/ord",
+      "index_path": "/data/ord/index.redb",
+      "extra_args": ["--index-sats", "--enable-json-api"],
+      "cache_ttl_s": 3600
+    },
+    "watchlist": {
+      "utxo_monitoring": true,
+      "min_balance_sat": 10000,
+      "address_pool_limit": 1000
+    },
+    "fees": {
+      "strategy": "hybrid",
+      "fixed_sat_vb": 12,
+      "mempool_space": {
+        "enabled": true,
+        "url": "https://mempool.space/api",
+        "target_conf": 3,
+        "multipliers": {
+          "normal": 1.0,
+          "fast": 1.5,
+          "urgent": 2.5
+        }
+      },
+      "fallback": "fixed",
+      "max_sat_vb": 200
+    },
+    "safety": {
+      "min_confirmations": 6,
+      "max_reorg_depth": 120,
+      "reorg_grace_period_s": 3600,
+      "dust_limit_sat": 546,
+      "min_output_value_sat": 1000
+    },
+    "legacy": {
+      "fee_per_byte": 10,
+      "rpc_url": "http://127.0.0.1:8332"
+    }
+  },
+
+  "ethereum": {
+    "network_name": "ethereum",
+    "chain_id": 1,
+    "rpc": {
+      "primary": "http://127.0.0.1:8545",
+      "failover": [
+        "https://rpc.ankr.com/eth",
+        "https://ethereum.publicnode.com"
+      ],
+      "timeout_ms": 30000,
+      "max_retries": 4,
+      "retry_backoff_ms": [500, 1500, 3000],
+      "ws_url": "wss://mainnet.infura.io/ws/v3/YOUR_PROJECT_ID",
+      "ws_reconnect_interval_s": 15
+    },
+    "log_filter": {
+      "bridge_contract": "0x0000000000000000000000000000000000000000",
+      "topics": [
+        "0xddf252ad"
+      ],
+      "polling_interval_s": 15
+    },
+    "signer": {
+      "type": "private_key",
+      "private_key": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "address": "0xYourRelayWallet",
+      "nonce_management": {
+        "strategy": "optimistic",
+        "local_sync_interval_ms": 3000,
+        "max_pending": 10,
+        "resync_after_failure": true
+      }
+    },
+    "contract": {
+      "bridge": "0x0000000000000000000000000000000000000000",
+      "token_factory": "0x0000000000000000000000000000000000000000",
+      "verifier": "0x0000000000000000000000000000000000000000"
+    },
+    "gas": {
+      "multiplier": 1.25,
+      "type": "eip1559",
+      "estimation_blocks": 6,
+      "max_priority_fee_gwei_cap": 10,
+      "max_fee_per_gas_gwei_cap": 150
+    },
+    "confirmations": {
+      "required": 12,
+      "safe": 32,
+      "finalized": 64
+    },
+    "oracle_sanity_check": {
+      "enabled": true,
+      "source": "chainlink",
+      "min_price_eth_usd": 800,
+      "max_price_eth_usd": 10000,
+      "fallback_behavior": "pause"
+    },
+    "safety": {
+      "max_value_per_tx_eth": "10.0",
+      "daily_eth_limit": "1000.0",
+      "circuit_breaker": {
+        "enabled": true,
+        "price_drop_percent_24h": 20,
+        "gas_spike_multiplier": 4.0
+      }
+    },
+    "legacy": {
+      "eth_rpc": "http://127.0.0.1:8545",
+      "eth_contract": "0x0000000000000000000000000000000000000000",
+      "eth_private_key": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  },
+
+  "protocol": {
+    "version": "1.0.1",
+    "id": "brc20-eth-vNext",
+    "chain_id": "bitcoin-mainnet",
+    "magic_bytes": "4252433230",
+    "require_identity": true,
+    "identity_types": ["bip322", "zk-attest", "inscription-address"],
+    "max_inscription_bytes": 40000,
+    "allowed_op_types": ["deploy", "mint", "transfer", "burn"],
+    "allowed_ticks": ["*"],
+    "blacklist_ticks": ["scam", "rug"],
+    "min_tick_length": 4,
+    "max_tick_length": 32,
+    "rate_limits": {
+      "max_mint_per_inscription": 1000000000,
+      "max_transfer_per_tx": 100
+    }
+  },
+
+  "relay": {
+    "mode": "full",
+    "workers": 6,
+    "poll_interval_s": {
+      "normal": 30,
+      "catchup": 5
+    },
+    "max_concurrent_eth_txs": 8,
+    "reorg_detection": {
+      "enabled": true,
+      "check_every_blocks": 8,
+      "max_depth": 128
+    },
+    "database": {
+      "type": "sqlite",
+      "path": "/data/bridge/state.db",
+      "journal_mode": "WAL",
+      "sync_mode": "NORMAL",
+      "cache_size_mb": 512
+    },
+    "checkpoints": {
+      "save_every_s": 300,
+      "save_on_every_n_blocks": 12
+    },
+    "alerting": {
+      "enabled": true,
+      "webhook_urls": ["https://hooks.slack.com/..."],
+      "events": [
+        "reorg_detected",
+        "high_fee_spike",
+        "circuit_breaker",
+        "tx_failed",
+        "oracle_out_of_bounds"
+      ]
+    }
+  },
+
+  "security": {
+    "secrets": {
+      "provider": "env",
+      "prefix": "BRC20_BRIDGE_"
+    },
+    "rate_limit": {
+      "api": {
+        "requests_per_minute": 120,
+        "burst": 40
+      }
+    },
+    "cors": {
+      "enabled": false,
+      "allowed_origins": ["https://your-frontend.com"]
+    }
+  }
+}
