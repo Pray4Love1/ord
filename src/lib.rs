@@ -119,6 +119,7 @@ pub mod chain;
 pub mod decimal;
 mod deserialize_from_str;
 mod error;
+pub mod errors;
 mod fee_rate;
 mod fund_raw_transaction;
 pub mod index;
@@ -141,6 +142,7 @@ pub mod subcommand;
 mod tally;
 pub mod templates;
 pub mod wallet;
+pub mod zk;
 
 type Result<T = (), E = Error> = std::result::Result<T, E>;
 type SnafuResult<T = (), E = SnafuError> = std::result::Result<T, E>;
