@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ordinals.com/brc20v2/state.schema.json",
+  "title": "BRC-20 v2 State",
+  "type": "object",
+  "required": [
+    "version",
+    "token",
+    "balances",
+    "metadata",
+    "rules",
+    "prev_state_hash",
+    "merkle_root"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Protocol version string, e.g. '2'."
+    },
+    "token": {
+      "type": "object",
+      "required": ["symbol", "max_supply", "decimals"],
+      "properties": {
+        "symbol": {"type": "string"},
+        "max_supply": {"type": "string"},
+        "decimals": {"type": "integer", "minimum": 0}
+      }
+    },
+    "balances": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "description": "Stringified integer amounts keyed by address."
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": {"type": ["string", "number", "boolean", "null"]}
+    },
+    "rules": {
+      "type": "object",
+      "properties": {
+        "soulbound": {"type": "boolean", "default": false},
+        "max_per_tx": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    },
+    "vesting": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["address", "amount", "unlock_height"],
+        "properties": {
+          "address": {"type": "string"},
+          "amount": {"type": "string"},
+          "unlock_height": {"type": "integer"}
+        }
+      }
+    },
+    "prev_state_hash": {
+      "type": "string",
+      "description": "Hash pointer to the previous state object."
+    },
+    "merkle_root": {
+      "type": "string",
+      "description": "Merkle root commitment of balances for ZK proofs."
+    },
+    "state_hash": {
+      "type": "string",
+      "description": "Deterministic hash of the current state." 
+    }
+  },
+  "additionalProperties": false
+}
