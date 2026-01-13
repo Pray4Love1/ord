@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ordinals.com/schemas/brc20v2.json",
+  "title": "BRC-20 v2 Canonical Schema",
+  "type": "object",
+  "oneOf": [
+    { "$ref": "#/$defs/tokenState" },
+    { "$ref": "#/$defs/zkProofEnvelope" }
+  ],
+  "$defs": {
+    "tokenState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["token_id", "balances", "prev_state_hash", "merkle_root"],
+      "properties": {
+        "token_id": { "type": "string", "minLength": 1 },
+        "balances": {
+          "type": "object",
+          "patternProperties": {
+            "^[a-zA-Z0-9:_-]+$": { "type": "integer", "minimum": 0 }
+          },
+          "additionalProperties": false
+        },
+        "prev_state_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "merkle_root": {
+          "type": "string",
+          "pattern": "^[0-9a-f]*$"
+        }
+      }
+    },
+    "zkProofEnvelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "domain",
+        "from",
+        "to",
+        "amount",
+        "prev_state_hash",
+        "nonce",
+        "timestamp",
+        "chain_id",
+        "identity_verified",
+        "proof_hash"
+      ],
+      "properties": {
+        "domain": { "type": "string", "const": "brc20v2.zk.transfer" },
+        "from": { "type": "string", "minLength": 1 },
+        "to": { "type": "string", "minLength": 1 },
+        "amount": { "type": "integer", "minimum": 1 },
+        "prev_state_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "nonce": { "type": "integer", "minimum": 0 },
+        "timestamp": { "type": "integer", "minimum": 0 },
+        "chain_id": { "type": "integer", "minimum": 0 },
+        "identity_verified": { "type": "boolean", "const": true },
+        "proof_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    }
+  }
+}
